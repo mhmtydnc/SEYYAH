@@ -1,0 +1,2 @@
+ALTER TABLE places ADD COLUMN IF NOT EXISTS tur TEXT NOT NULL DEFAULT 'gezi';
+CREATE INDEX IF NOT EXISTS idx_places_tur ON places (tur);
