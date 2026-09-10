@@ -1,0 +1,5 @@
+nwr/tourism=attraction,museum,viewpoint,artwork,zoo,theme_park,aquarium,gallery,picnic_site
+nwr/historic=castle,ruins,monument,archaeological_site,memorial,city_gate,fort,tower
+nwr/natural=waterfall,beach,cave_entrance,peak,hot_spring
+nwr/leisure=park,nature_reserve,garden
+nwr/amenity=parking,place_of_worship,restaurant,cafe,fuel,toilets

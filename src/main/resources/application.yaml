@@ -21,7 +21,11 @@ spring:
 
   flyway:
     enabled: true
-    baseline-on-migrate: true
+
+ors:
+  api:
+    url: https://api.openrouteservice.org
+    key: ${ORS_API_KEY}
 
 server:
   port: 9090

@@ -1,6 +1,9 @@
 package com.seyyah.place;
 
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
 import java.util.List;
 import java.util.Map;
 
@@ -13,22 +16,13 @@ public class PlaceController {
     }
     @GetMapping("/koridor")
 
-    public List<Map<String, Object>> koridor(
+    public List<KoridorYeri> koridor(
             @RequestParam String wkt,
-            @RequestParam(defaultValue = "gezi") String tur,
-            @RequestParam(defaultValue="5000") double yaricap,
-            @RequestParam(defaultValue="40") int limit)
+            @RequestParam(defaultValue = "gezi") @Pattern(regexp = "gezi|mola") String tur,
+            @RequestParam(defaultValue="5000") @Min(100) @Max(20000) int yaricap,
+            @RequestParam(defaultValue="40") @Min(1) @Max(200) int limit)
     {
-
-        return repo.koridorda(wkt,tur, yaricap,limit).stream()
-                .map(r->Map.of(
-                        "id",r[0],
-                        "ad",r[1],
-                        "kategori", r[2],
-                        "enlem", r[4] ,
-                        "boylam", r[5],
-                        "yolaUzaklikM", Math.round(((Number)r[6]).doubleValue()),
-                        "yolOrani", r[7])).toList();
+        return repo.koridorda(wkt, tur, yaricap, limit);
     }
 
 }

@@ -8,21 +8,34 @@ public interface PlaceRepository extends JpaRepository<Place,Long> {
 
 @Query(value= """
 
-    SELECT p.id, p.ad, p.kategori, p.tur,
-        ST_Y(p.konum::geometry) AS enlem,
-        ST_X(p.konum::geometry) AS boylam,
-        ST_Distance(p.konum, r.hat)        AS yola_uzaklik,
-        ST_LineLocatePoint(r.hat::geometry, p.konum::geometry)   AS yol_orani,
-        p.ucret, p.calisma_saatleri, p.wikidata_id, p.website
-        FROM places p,
-        (SELECT ST_GeogFromText(:wkt) AS hat) r
-        WHERE p.tur = :tur
-        AND ST_DWithin(p.konum, r.hat,  :yaricap)
-        ORDER BY yol_orani
-        LIMIT :limit  
+    WITH rota AS(
+        SELECT ST_GeogFromText(:wkt) AS hat
+    ),
+        
+        adaylar AS (
+            SELECT p.*, ST_Distance(p.konum, rota.hat) AS uzaklik
+            FROM places p , rota
+            WHERE p.tur = :tur
+            AND ST_DWithin(p.konum, rota.hat, :yaricap)
+            ORDER BY p.onem_skoru DESC, uzaklik
+            LIMIT :limit
+        )
+
+    SELECT a.id, a.ad, a.kategori, a.tur,
+        ST_Y(a.konum::geometry) AS enlem,
+        ST_X(a.konum::geometry) AS boylam,
+        Round(a.uzaklik)::int        AS "yolaUzaklikM",
+        ST_LineLocatePoint(rota.hat::geometry, a.konum::geometry)   AS "yolOrani",
+        a.ucret , 
+        a.calisma_saatleri             AS "calismaSaatleri", 
+        a.wikidata_id                  AS "wikidataId", 
+        a.website
+    FROM adaylar a, rota
+    ORDER BY "yolOrani"
+       
 """, nativeQuery = true)
 
-    List<Object[]> koridorda(@Param("wkt")String rotaWkt,
+    List<KoridorYeri> koridorda(@Param("wkt")String rotaWkt,
                              @Param("tur") String tur,
                              @Param("yaricap")double yaricap,
                              @Param ("limit") int limit);
