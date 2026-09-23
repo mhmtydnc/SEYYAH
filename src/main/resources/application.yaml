@@ -22,6 +22,12 @@ spring:
   flyway:
     enabled: true
 
+  # RestClient.Builder üzerinden OpenRouteService'e uygulanır
+  http:
+    client:
+      connect-timeout: 5s
+      read-timeout: 20s
+
 ors:
   api:
     url: https://api.openrouteservice.org
