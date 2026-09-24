@@ -36,6 +36,13 @@ export interface YerDetayi extends Pick<KoridorYeri, 'id' | 'ad' | 'kategori' | 
     yorumlar?: { yazar: string; yazarBaglantisi: string | null; puan: number; metin: string; zaman: string }[] } | null
 }
 
+export type HazirSoruTuru = 'deger' | 'sure' | 'cocuk' | 'ipucu'
+
+export interface YerSorusuYaniti {
+  cevap: string
+  onbellekten: boolean
+}
+
 export interface Rota {
   sira: number
   ad: string

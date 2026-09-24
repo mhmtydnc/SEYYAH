@@ -1,4 +1,4 @@
-import type { KimlikYaniti, KonumOnerisi, Kullanici, KayitliRota, RotaKaydi, RotaYaniti, Konum, DurakliRota, RotaNoktasi, YerDetayi } from './tipler'
+import type { HazirSoruTuru, KimlikYaniti, KonumOnerisi, Kullanici, KayitliRota, RotaKaydi, RotaYaniti, Konum, DurakliRota, RotaNoktasi, YerDetayi, YerSorusuYaniti } from './tipler'
 
 export const TOKEN_ANAHTARI = 'seyyah-token'
 
@@ -39,6 +39,10 @@ export async function istek<T>(yol: string, ayarlar: RequestInit = {}): Promise<
 
 export const api = {
   yerDetayi: (kimlik: number) => istek<YerDetayi>(`/api/yerler/${kimlik}/detay`),
+  hazirSoruSor: (kimlik: number, soru: HazirSoruTuru) =>
+    istek<YerSorusuYaniti>(`/api/yerler/${kimlik}/hazir-soru`, { method: 'POST', body: JSON.stringify({ soru }) }),
+  yerHakkindaSor: (kimlik: number, metin: string) =>
+    istek<YerSorusuYaniti>(`/api/uye/yerler/${kimlik}/soru`, { method: 'POST', body: JSON.stringify({ metin }) }),
   konumAra: (sorgu: string, sinyal?: AbortSignal) =>
     istek<KonumOnerisi[]>(`/api/konum/ara?${new URLSearchParams({ q: sorgu, limit: '5' })}`, { signal: sinyal }),
   rotaOlustur: (kalkis: Konum, varis: Konum, yaricap: number) =>
