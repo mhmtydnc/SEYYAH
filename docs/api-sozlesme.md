@@ -33,6 +33,8 @@ ORS `/geocode/autocomplete` üzerinden, Türkiye ile sınırlı (`boundary.count
 - `ad`: ana rota `"En hızlı"`; ORS'un kendi alternatifleri `"Alternatif 1"`, `"Alternatif 2"`; ara şehirden
   geçenler `"<Şehir> üzerinden"` (`uzerinden` alanında şehir adı).
 - Alternatif bulunamazsa ya da alternatif hesaplama hata verirse yalnızca ana rota döner (istek hata vermez).
+- Aşama 6: her rotada `"araNokta": { "ad": "Aksaray", "enlem": 38.37, "boylam": 34.03 }` ("X üzerinden" rotalarda),
+  diğerlerinde `null`. Duraklı rota isteğinde seçili alternatifin korunması için gerekir.
 - `geometri`: GeoJSON sırası `[boylam, enlem]`. Leaflet için `[enlem, boylam]`'a çevrilmeli.
 
 `KoridorYeri`:
@@ -53,6 +55,26 @@ Hatalar: 400 geçersiz parametre, 404 rota bulunamadı, 503 kota doldu, 502/504 
 
 `GET /api/auth/ben` (giriş gerekli) → `{ "id": 1, "ad": "Mehmet", "eposta": "m@ornek.com" }`; token yok/geçersiz → 401
 
+## Duraklı rota (herkese açık) — Aşama 6
+`POST /api/rota/duraklu` — seçilen durakları sırayla uğrayarak rota; bacak mesafe/süreleri.
+```json
+{ "noktalar": [
+    { "enlem": 39.92, "boylam": 32.85 },
+    { "enlem": 39.14, "boylam": 34.16, "durakId": 118 },
+    { "enlem": 38.37, "boylam": 34.03 },
+    { "enlem": 38.64, "boylam": 34.83 } ] }
+```
+- `noktalar`: kalkış, ara noktalar, varış — **gönderilen sırayla** (sıralamayı istemci yapar: durakları `yolOrani`'na göre
+  dizer; seçili rota "X üzerinden" ise o şehir de ara nokta olarak eklenir, `durakId` olmadan). En az 2, en fazla 12 nokta.
+- 200 →
+```json
+{ "mesafeM": 312400, "sureSn": 12100,
+  "geometri": [[32.85, 39.92], [32.90, 39.88]],
+  "bacaklar": [ { "mesafeM": 151000, "sureSn": 5600 }, { "mesafeM": 98000, "sureSn": 3900 }, { "mesafeM": 63400, "sureSn": 2600 } ] }
+```
+- `bacaklar[i]`: `noktalar[i]` → `noktalar[i+1]` (uzunluk = nokta sayısı − 1).
+- Hatalar Rota ile aynı; 400: nokta sayısı sınır dışı ya da koordinat geçersiz.
+
 ## Kayıtlı rotalar (giriş gerekli)
 `POST /api/rotalarim`
 ```json
@@ -61,6 +83,9 @@ Hatalar: 400 geçersiz parametre, 404 rota bulunamadı, 503 kota doldu, 502/504 
   "varis":  { "ad": "Göreme",   "enlem": 38.64, "boylam": 34.83 } }
 ```
 - 201 → `{ "id": 7, "baslik": "...", "kalkis": {...}, "varis": {...}, "olusturulma": "2026-09-24T14:30:00Z" }`
+- Aşama 6 ile isteğe bağlı iki alan (istek ve yanıtta; eski kayıtlarda `null` / `[]`):
+  `"uzerinden": { "ad": "Aksaray", "enlem": 38.37, "boylam": 34.03 }` ve
+  `"duraklar": [ { "id": 118, "ad": "Kırşehir Kalesi", "kategori": "castle", "enlem": 39.14, "boylam": 34.16 } ]` (en fazla 10).
 
 `GET /api/rotalarim` → aynı öğelerin listesi, yeniden eskiye
 `DELETE /api/rotalarim/{id}` → 204; başkasının rotasıysa ya da yoksa 404

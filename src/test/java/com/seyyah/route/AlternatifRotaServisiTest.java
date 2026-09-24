@@ -40,12 +40,12 @@ class AlternatifRotaServisiTest {
         List<AlternatifRotaServisi.RotaSecenegi> sonuc = servisi.alternatifleriBul(ana, K_LON, K_LAT, V_LON, V_LAT);
 
         assertThat(sonuc).hasSize(2);
-        // süreye göre artan: alt2 (4000) < alt1 (4200)
+        // süreye göre artan: alt2 (4000) < alt1 (4200); numara sıralamadan sonra verilir
         assertThat(sonuc.get(0).sonuc()).isEqualTo(alt2);
-        assertThat(sonuc.get(0).ad()).isEqualTo("Alternatif 2");
+        assertThat(sonuc.get(0).ad()).isEqualTo("Alternatif 1");
         assertThat(sonuc.get(0).uzerinden()).isNull();
         assertThat(sonuc.get(1).sonuc()).isEqualTo(alt1);
-        assertThat(sonuc.get(1).ad()).isEqualTo("Alternatif 1");
+        assertThat(sonuc.get(1).ad()).isEqualTo("Alternatif 2");
 
         verify(jdbcClient, never()).sql(anyString());
     }

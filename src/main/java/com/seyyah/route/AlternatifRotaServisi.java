@@ -8,6 +8,10 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 // Ana rotaya ek olarak en fazla 2 alternatif üretir. ORS public API'de alternative_routes
 // yalnızca yaklaşık ~100 km'e kadar çalıştığından (üstünde 400/2004 döner) iki farklı strateji var:
@@ -43,9 +47,16 @@ public class AlternatifRotaServisi {
                     ? orsAlternatifleriIleBul(kalkisLon, kalkisLat, varisLon, varisLat)
                     : araSehirlerIleBul(ana, kalkisLon, kalkisLat, varisLon, varisLat);
 
-            return sonuc.stream()
+            List<RotaSecenegi> sirali = sonuc.stream()
                     .sorted(Comparator.comparingDouble(rs -> rs.sonuc().sureSn()))
                     .toList();
+            // ORS alternatiflerinin numarası sıralamadan sonra verilir, yoksa "Alternatif 2" önce görünür
+            List<RotaSecenegi> adlandirilmis = new ArrayList<>();
+            int no = 1;
+            for (RotaSecenegi rs : sirali) {
+                adlandirilmis.add(rs.uzerinden() != null ? rs : new RotaSecenegi(rs.sonuc(), "Alternatif " + no++, null));
+            }
+            return adlandirilmis;
         } catch (Exception e) {
             log.warn("Alternatif rota hesaplanamadı, yalnızca ana rota dönülüyor: {}", e.getMessage());
             return List.of();
@@ -77,42 +88,48 @@ public class AlternatifRotaServisi {
             return List.of();
         }
 
+        // Kota sınırı kadar aday aynı anda denenir (sırayla ~0,5 sn x 4); kabul yine aday sırasıyla yapılır
+        long t0 = System.nanoTime();
+        List<AdayKonum> denenecekler = adaylar.subList(0, Math.min(MAKS_ORS_CAGRISI, adaylar.size()));
+        List<RotaSonucu> adayRotalari = new ArrayList<>();
+        try (ExecutorService yurutucu = Executors.newVirtualThreadPerTaskExecutor()) {
+            List<Future<RotaSonucu>> istekler = denenecekler.stream()
+                    .map(aday -> yurutucu.submit(() -> openRouteService.getRouteViaPoint(
+                            kalkisLon, kalkisLat, aday.boylam(), aday.enlem(), varisLon, varisLat)))
+                    .toList();
+            for (int i = 0; i < istekler.size(); i++) {
+                try {
+                    adayRotalari.add(istekler.get(i).get());
+                } catch (ExecutionException e) {
+                    log.warn("Aday şehir '{}' için rota alınamadı: {}", denenecekler.get(i).ad(), e.getCause().getMessage());
+                    adayRotalari.add(null);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return List.of();
+                }
+            }
+        }
+
+        long t1 = System.nanoTime();
         List<RotaSonucu> kabulEdilenler = new ArrayList<>();
         kabulEdilenler.add(ana);
-
         List<RotaSecenegi> sonuc = new ArrayList<>();
-        int orsCagrisi = 0;
-
-        for (AdayKonum aday : adaylar) {
-            if (sonuc.size() >= HEDEF_ALTERNATIF_SAYISI || orsCagrisi >= MAKS_ORS_CAGRISI) {
-                break;
-            }
-
-            RotaSonucu adayRota;
-            try {
-                adayRota = openRouteService.getRouteViaPoint(
-                        kalkisLon, kalkisLat, aday.boylam(), aday.enlem(), varisLon, varisLat);
-            } catch (Exception e) {
-                log.warn("Aday şehir '{}' için rota alınamadı: {}", aday.ad(), e.getMessage());
-                continue;
-            } finally {
-                orsCagrisi++;
-            }
-
-            if (adayRota.sureSn() > SURE_CARPANI * ana.sureSn()) {
+        for (int i = 0; i < denenecekler.size() && sonuc.size() < HEDEF_ALTERNATIF_SAYISI; i++) {
+            RotaSonucu adayRota = adayRotalari.get(i);
+            if (adayRota == null || adayRota.sureSn() > SURE_CARPANI * ana.sureSn()) {
                 continue;
             }
-
             boolean fazlaOrtusuyor = kabulEdilenler.stream()
                     .anyMatch(digeri -> ortusmeOrani(adayRota.wkt(), digeri.wkt()) >= ORTUSME_ESIGI);
             if (fazlaOrtusuyor) {
                 continue;
             }
-
             kabulEdilenler.add(adayRota);
-            sonuc.add(new RotaSecenegi(adayRota, aday.ad() + " üzerinden", aday.ad()));
+            String ad = denenecekler.get(i).ad();
+            sonuc.add(new RotaSecenegi(adayRota, ad + " üzerinden", ad));
         }
-
+        log.info("Ara şehir: {} aday, ORS {} ms, eleme {} ms", denenecekler.size(),
+                (t1 - t0) / 1_000_000, (System.nanoTime() - t1) / 1_000_000);
         return sonuc;
     }
 
@@ -159,10 +176,10 @@ public class AlternatifRotaServisi {
     double ortusmeOrani(String adayWkt, String digerWkt) {
         Double oran = jdbcClient.sql("""
                 WITH aday AS (
-                    SELECT ST_SetSRID(ST_GeomFromEWKT(:adayWkt), 4326) AS hat
+                    SELECT ST_SimplifyPreserveTopology(ST_SetSRID(ST_GeomFromEWKT(:adayWkt), 4326), 0.0005) AS hat
                 ),
                 tampon AS (
-                    SELECT ST_Buffer(ST_SetSRID(ST_GeomFromEWKT(:digerWkt), 4326)::geography, 500)::geometry AS alan
+                    SELECT ST_Buffer(ST_SimplifyPreserveTopology(ST_SetSRID(ST_GeomFromEWKT(:digerWkt), 4326), 0.0005)::geography, 500)::geometry AS alan
                 )
                 SELECT COALESCE(
                     ST_Length(ST_Intersection(a.hat, t.alan)::geography)

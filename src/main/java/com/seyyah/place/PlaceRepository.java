@@ -21,37 +21,31 @@ public interface PlaceRepository extends JpaRepository<Place,Long> {
     ),
 
         parcalar AS (
-            -- Uzun, çapraz bir rotanın tek sınırlayıcı kutusu yarım ülkeyi kapsar ve GIST indeksi
-            -- işe yaramaz. Küçük parçaların kutuları dardır; indeks her biri için az aday döndürür.
-            SELECT ST_Subdivide(hat, 32)::geography AS parca
-            FROM rota
+            -- Rota, bolum sinirlariyla hizali esit parcalara bolunur (bolum basina 4). Kutulari dar oldugu icin
+            -- GIST indeksi isler; her parcanin rota uzerindeki araligi da bilindiginden adayin bolumu en yakin
+            -- parcasindan gelir. Binlerce aday icin ST_LineLocatePoint hesaplamak 700 km lik rotada saniyeler suruyordu.
+            SELECT i AS parca_no,
+                   ST_LineSubstring(rota.hat, i::float8 / (4 * :bolumSayisi), (i + 1)::float8 / (4 * :bolumSayisi))::geography AS parca
+            FROM rota, generate_series(0, 4 * :bolumSayisi - 1) AS i
         ),
 
         adaylar AS (
-            -- Parçaların birleşimi rotanın kendisi: en yakın parçaya uzaklık = rotaya uzaklık
-            SELECT p.id, MIN(ST_Distance(p.konum, pr.parca)) AS uzaklik
+            -- Her aday icin en yakin parca: ona uzaklik = rotaya uzaklik, sirasi = bolumu
+            SELECT DISTINCT ON (p.id) p.id, ST_Distance(p.konum, pr.parca) AS uzaklik, pr.parca_no
             FROM places p
             JOIN parcalar pr ON ST_DWithin(p.konum, pr.parca, :yaricap)
             WHERE p.tur = :tur
-            GROUP BY p.id
-        ),
-
-        konumlu AS (
-            SELECT p.*, a.uzaklik,
-                   ST_LineLocatePoint(rota.hat, p.konum::geometry) AS oran
-            FROM adaylar a
-            JOIN places p ON p.id = a.id
-            CROSS JOIN rota
+            ORDER BY p.id, ST_Distance(p.konum, pr.parca)
         ),
 
         sirali AS (
-            -- oran = 1 (rotanın son noktası) son bölüme düşsün diye LEAST
-            SELECT k.*,
+            SELECT p.*, a.uzaklik,
                    ROW_NUMBER() OVER (
-                       PARTITION BY LEAST(FLOOR(k.oran * :bolumSayisi), :bolumSayisi - 1)
-                       ORDER BY k.onem_skoru DESC, k.uzaklik
+                       PARTITION BY a.parca_no / 4
+                       ORDER BY p.onem_skoru DESC, a.uzaklik
                    ) AS bolum_sirasi
-            FROM konumlu k
+            FROM adaylar a
+            JOIN places p ON p.id = a.id
         ),
 
         secilen AS (
@@ -67,13 +61,14 @@ public interface PlaceRepository extends JpaRepository<Place,Long> {
         ST_Y(s.konum::geometry)        AS enlem,
         ST_X(s.konum::geometry)        AS boylam,
         ROUND(s.uzaklik)::int          AS "yolaUzaklikM",
-        s.oran                         AS "yolOrani",
+        ST_LineLocatePoint(rota.hat, s.konum::geometry) AS "yolOrani",
         s.ucret,
         s.calisma_saatleri             AS "calismaSaatleri",
         s.wikidata_id                  AS "wikidataId",
         s.website
     FROM secilen s
-    ORDER BY s.oran
+    CROSS JOIN rota
+    ORDER BY "yolOrani"
 
 """, nativeQuery = true)
 
