@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/istemci'
+import { kategoriAdi } from '../api/kategoriler'
 import type { Konum, KoridorYeri, RotaYaniti, YerTuru } from '../api/tipler'
 import { KonumAlani } from '../bilesenler/KonumAlani'
 import { RotaHaritasi } from '../harita/RotaHaritasi'
@@ -153,7 +154,7 @@ export function AnaSayfa() {
             : rota.yerler[etkinTur].length === 0 ? <p className="bos-metin">Bu türde yer bulunamadı.</p>
               : rota.yerler[etkinTur].map((yer) => <div className="yer-karti" key={yer.id}>
                 <button type="button" className="yer-sec" onClick={() => seciliYerAyarla(yer)}>
-                  <strong>{yer.ad}</strong><span>{yer.kategori} · Yoldan {(yer.yolaUzaklikM / 1000).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} km</span>
+                  <strong>{yer.ad}</strong><span>{kategoriAdi(yer.kategori)} · Yoldan {(yer.yolaUzaklikM / 1000).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} km</span>
                 </button>
                 {yer.calismaSaatleri && <small>Çalışma saatleri: {yer.calismaSaatleri}</small>}
                 {yer.ucret != null && <small>Ücret: {yer.ucret}</small>}
