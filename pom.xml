@@ -105,6 +105,15 @@
 	</dependencies>
 
 	<build>
+		<!-- Yerel sırlar jar'a asla girmesin (dosya config/ altında durur ama eski bir kopya kalmış olabilir) -->
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<excludes>
+					<exclude>application-local*.yaml</exclude>
+				</excludes>
+			</resource>
+		</resources>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
