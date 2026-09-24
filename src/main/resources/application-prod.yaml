@@ -1,0 +1,35 @@
+spring:
+  config:
+    import: optional:file:C:/seyyah/gizli.yaml
+
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  ssl:
+    bundle:
+      pem:
+        seyyah:
+          reload-on-update: true
+          certificate: file:C:/seyyah/sertifika/${seyyah.alan-adi}-chain.pem
+          private-key: file:C:/seyyah/sertifika/${seyyah.alan-adi}-key.pem
+
+server:
+  port: 443
+  ssl:
+    bundle: seyyah
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+# Dağıtım (Aşama 4) ile ilgili uygulamaya özel ayarlar; docs/dagitim.md'de açıklanır
+seyyah:
+  alan-adi: seyyah.polandcentral.cloudapp.azure.com
+  http-yonlendirme:
+    port: 80
+  acme-dizini: C:/seyyah/acme
