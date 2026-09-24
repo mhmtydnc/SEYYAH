@@ -101,6 +101,21 @@ h1 { font-size: clamp(30px, 4vw, 48px); letter-spacing: -.04em; line-height: 1.0
 .yer-detay-yorum-kisa { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
 .yer-detay-devami { border: 0; background: none; color: var(--lacivert); padding: 3px 0; font-weight: 700; }
 .yer-detay-icerigi > a { font-size: 14px; font-weight: 700; }
+.yer-sorulari { width: 100%; min-width: 0; border-top: 1px solid var(--kenar); padding-top: 12px; }
+.yer-sorulari h3 { margin: 0 0 9px; font-size: 17px; }
+.yer-soru-cipleri { display: flex; flex-wrap: wrap; gap: 7px; width: 100%; }
+.yer-soru-cipleri button { min-width: 0; max-width: 100%; overflow-wrap: anywhere; border: 1px solid var(--kenar); border-radius: 18px; background: #f6f8f8; color: var(--koyu); padding: 7px 10px; font-size: 13px; text-align: left; }
+.yer-serbest-soru { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; width: 100%; }
+.yer-serbest-soru label { font-size: 13px; font-weight: 700; }
+.yer-serbest-soru textarea { display: block; width: 100%; min-height: 76px; resize: vertical; border: 1px solid var(--kenar); border-radius: 9px; padding: 9px 10px; font: inherit; }
+.yer-soru-form-alt { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.yer-soru-form-alt small, .yer-soru-notu { color: var(--soluk); font-size: 11px; }
+.yer-soru-hata { color: #9f3a2e; font-size: 13px; margin: 8px 0 0 !important; }
+.yer-soru-yanitlari { list-style: none; padding: 0; margin: 8px 0 0; width: 100%; }
+.yer-soru-yanitlari li { min-width: 0; overflow-wrap: anywhere; border-top: 1px solid var(--kenar); padding: 9px 0; }
+.yer-soru-yanitlari strong { font-size: 13px; }
+.yer-soru-yanitlari p { margin: 4px 0 0 !important; white-space: pre-line; line-height: 1.45; }
+.yer-soru-notu { display: block; margin-top: 10px; line-height: 1.4; }
 .yer-detay-hata { color: #9f3a2e; font-size: 13px; }
 .yer-detay-iskelet { display: grid; gap: 12px; padding-top: 10px; }
 .yer-detay-iskelet div { height: 18px; border-radius: 7px; background: #e9eeee; animation: detay-yukleniyor 1.3s ease-in-out infinite alternate; }
