@@ -40,3 +40,7 @@ veri/
 
 .env
 application-local.yaml
+### Ajan takımı ###
+tools/takim/kullanim.log
+tools/takim/.soguma-*
+tools/takim/raporlar/
