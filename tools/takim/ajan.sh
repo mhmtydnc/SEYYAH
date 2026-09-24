@@ -53,16 +53,22 @@ fi
 
 BASLA=$(date +%s)
 CIKTI=$(mktemp)
+# Antigravity çalıştığı dizini çalışma alanı saymıyor, AGENTS.md'yi arayıp ana repo'ya yazabiliyor;
+# dizin ve yasak istemin en başında açıkça söylenir
+WT_WIN=$(cygpath -w "$WT"); KOK_WIN=$(cygpath -w "$KOK")
+TAM_ISTEM=$(mktemp)
+{ printf 'ÇALIŞMA DİZİNİN: %s\nSadece bu dizindeki dosyaları oku ve değiştir. %s (ana repo) ve başka hiçbir dizine yazma.\n\n' "$WT_WIN" "$KOK_WIN"
+  cat "$ISTEM"; } > "$TAM_ISTEM"
 case "$AJAN" in
   codex)
     # --ignore-user-config: masaüstü uygulamasının eklenti/MCP yükü her çağrıda token yemesin
     codex exec -m "$MODEL" -c model_reasoning_effort="$EFOR" \
       --ignore-user-config -c 'windows.sandbox="elevated"' \
       -c sandbox_workspace_write.network_access=true \
-      --sandbox workspace-write -C "$WT" --add-dir "$KOK/.git" -o "$RAPOR" - < "$ISTEM" >"$CIKTI" 2>&1
+      --sandbox workspace-write -C "$WT" --add-dir "$KOK/.git" -o "$RAPOR" - < "$TAM_ISTEM" >"$CIKTI" 2>&1
     KOD=$? ;;
   gemini)
-    ( cd "$WT" && "$AGY" -p "$(cat "$ISTEM")" --model "$MODEL" \
+    ( cd "$WT" && "$AGY" -p "$(cat "$TAM_ISTEM")" --model "$MODEL" --add-dir "$WT_WIN" \
         --dangerously-skip-permissions --print-timeout 40m ) >"$CIKTI" 2>&1
     KOD=$?
     cp "$CIKTI" "$RAPOR" ;;
@@ -80,5 +86,5 @@ if (( KOD != 0 )) && tail -30 "$CIKTI" | grep -qiE 'usage limit|rate limit|quota
 fi
 
 tail -20 "$CIKTI"
-rm -f "$CIKTI"
+rm -f "$CIKTI" "$TAM_ISTEM"
 exit $KOD
