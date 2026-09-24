@@ -23,7 +23,9 @@ gezilecek yerler (`gezi`), mola yerleri (`mola`) ve destek noktaları (`destek`)
 3. Sırları (şifre, API anahtarı) asla koda/commit'e yazma. `application-local.yaml` ve `.env` git dışıdır.
 4. Mevcut migration dosyalarını değiştirme; şema değişikliği için yeni `V<n>__aciklama.sql` ekle.
 5. Native SQL yorumlarında tek tırnak (') kullanma — Spring Data metin başlangıcı sanıyor.
-6. Bitirdiğinde değişiklikleri kendi dalına commit'le (mesaj Türkçe, kısa). `main`'e ve başka dallara push/merge yapma; birleştirmeyi takım lideri yapar.
+6. Codex ve Antigravity ajanları **commit atmaz** (sandbox git dizinine yazamıyor); değişiklikleri çalışma
+   ağacında bırakır, lider inceleyip commit'ler. Claude alt ajanları kendi dalına commit'ler.
+   Hiçbir ajan push/merge yapmaz; birleştirmeyi takım lideri yapar.
 7. Raporun kısa olsun: ne yaptın, hangi dosyalar, nasıl test ettin, açık kalanlar.
 
 ## Derleme / test
