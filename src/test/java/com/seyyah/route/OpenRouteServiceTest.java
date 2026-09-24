@@ -50,6 +50,30 @@ class OpenRouteServiceTest {
     }
 
     @Test
+    void alternatifRotalarIstektaAlternativeRoutesGovdesiTasir() {
+        sunucu.expect(requestTo(URL))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(jsonPath("$.alternative_routes.target_count").value(3))
+                .andExpect(jsonPath("$.alternative_routes.share_factor").value(0.6))
+                .andExpect(jsonPath("$.alternative_routes.weight_factor").value(1.6))
+                .andRespond(withSuccess("""
+                        {"type":"FeatureCollection","features":[
+                          {"properties":{"summary":{"distance":83000,"duration":3600}},"geometry":{"type":"LineString",
+                           "coordinates":[[27.1,38.4],[27.3,38.0]]}},
+                          {"properties":{"summary":{"distance":90000,"duration":4000}},"geometry":{"type":"LineString",
+                           "coordinates":[[27.1,38.4],[27.5,38.1]]}}
+                        ]}
+                        """, MediaType.APPLICATION_JSON));
+
+        var sonuclar = servis.getAlternativeRoutes(27.1, 38.4, 27.4, 37.9);
+
+        assertThat(sonuclar).hasSize(2);
+        assertThat(sonuclar.get(0).mesafeM()).isEqualTo(83000);
+        assertThat(sonuclar.get(1).mesafeM()).isEqualTo(90000);
+        assertThat(sonuclar.get(1).sureSn()).isEqualTo(4000);
+    }
+
+    @Test
     void bosFeatureListesiRotaBulunamadiSayilir() {
         sunucu.expect(requestTo(URL))
                 .andRespond(withSuccess("{\"features\":[]}", MediaType.APPLICATION_JSON));

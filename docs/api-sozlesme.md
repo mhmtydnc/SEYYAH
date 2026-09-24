@@ -14,22 +14,28 @@ Backend ve frontend bu dosyaya göre paralel geliştirilir. Değişiklik gerekir
 ```
 ORS `/geocode/autocomplete` üzerinden, Türkiye ile sınırlı (`boundary.country=TR`). Sonuç yoksa `[]`.
 
-## Rota (herkese açık)
+## Rota (herkese açık) — Aşama 5: alternatifli
 `GET /api/rota?kalkisEnlem&kalkisBoylam&varisEnlem&varisBoylam&yaricap=5000&limit=20`
 - `limit`: her tür için en fazla yer sayısı (1–100), `yaricap`: 100–20000 m
 ```json
 {
-  "mesafeM": 452310,
-  "sureSn": 17820,
-  "geometri": [[29.01, 41.00], [29.05, 40.98]],
-  "yerler": {
-    "gezi":   [ /* KoridorYeri */ ],
-    "mola":   [ /* KoridorYeri */ ],
-    "destek": [ /* KoridorYeri */ ]
-  }
+  "rotalar": [
+    { "sira": 0, "ad": "En hızlı", "uzerinden": null,
+      "mesafeM": 296400, "sureSn": 11400,
+      "geometri": [[32.85, 39.92], [32.90, 39.88]],
+      "yerler": { "gezi": [ /* KoridorYeri */ ], "mola": [], "destek": [] } },
+    { "sira": 1, "ad": "Aksaray üzerinden", "uzerinden": "Aksaray",
+      "mesafeM": 331200, "sureSn": 12900, "geometri": [], "yerler": { "gezi": [], "mola": [], "destek": [] } }
+  ]
 }
 ```
-`geometri`: GeoJSON sırası `[boylam, enlem]`. Leaflet için `[enlem, boylam]`'a çevrilmeli.
+- `rotalar` en az 1, en fazla 3 öğe; `sira = 0` her zaman en hızlı (ana) rotadır, diğerleri süreye göre artan.
+- `ad`: ana rota `"En hızlı"`; ORS'un kendi alternatifleri `"Alternatif 1"`, `"Alternatif 2"`; ara şehirden
+  geçenler `"<Şehir> üzerinden"` (`uzerinden` alanında şehir adı).
+- Alternatif bulunamazsa ya da alternatif hesaplama hata verirse yalnızca ana rota döner (istek hata vermez).
+- Aşama 6: her rotada `"araNokta": { "ad": "Aksaray", "enlem": 38.37, "boylam": 34.03 }` ("X üzerinden" rotalarda),
+  diğerlerinde `null`. Duraklı rota isteğinde seçili alternatifin korunması için gerekir.
+- `geometri`: GeoJSON sırası `[boylam, enlem]`. Leaflet için `[enlem, boylam]`'a çevrilmeli.
 
 `KoridorYeri`:
 ```json
@@ -49,6 +55,26 @@ Hatalar: 400 geçersiz parametre, 404 rota bulunamadı, 503 kota doldu, 502/504 
 
 `GET /api/auth/ben` (giriş gerekli) → `{ "id": 1, "ad": "Mehmet", "eposta": "m@ornek.com" }`; token yok/geçersiz → 401
 
+## Duraklı rota (herkese açık) — Aşama 6
+`POST /api/rota/duraklu` — seçilen durakları sırayla uğrayarak rota; bacak mesafe/süreleri.
+```json
+{ "noktalar": [
+    { "enlem": 39.92, "boylam": 32.85 },
+    { "enlem": 39.14, "boylam": 34.16, "durakId": 118 },
+    { "enlem": 38.37, "boylam": 34.03 },
+    { "enlem": 38.64, "boylam": 34.83 } ] }
+```
+- `noktalar`: kalkış, ara noktalar, varış — **gönderilen sırayla** (sıralamayı istemci yapar: durakları `yolOrani`'na göre
+  dizer; seçili rota "X üzerinden" ise o şehir de ara nokta olarak eklenir, `durakId` olmadan). En az 2, en fazla 12 nokta.
+- 200 →
+```json
+{ "mesafeM": 312400, "sureSn": 12100,
+  "geometri": [[32.85, 39.92], [32.90, 39.88]],
+  "bacaklar": [ { "mesafeM": 151000, "sureSn": 5600 }, { "mesafeM": 98000, "sureSn": 3900 }, { "mesafeM": 63400, "sureSn": 2600 } ] }
+```
+- `bacaklar[i]`: `noktalar[i]` → `noktalar[i+1]` (uzunluk = nokta sayısı − 1).
+- Hatalar Rota ile aynı; 400: nokta sayısı sınır dışı ya da koordinat geçersiz.
+
 ## Kayıtlı rotalar (giriş gerekli)
 `POST /api/rotalarim`
 ```json
@@ -57,6 +83,9 @@ Hatalar: 400 geçersiz parametre, 404 rota bulunamadı, 503 kota doldu, 502/504 
   "varis":  { "ad": "Göreme",   "enlem": 38.64, "boylam": 34.83 } }
 ```
 - 201 → `{ "id": 7, "baslik": "...", "kalkis": {...}, "varis": {...}, "olusturulma": "2026-09-24T14:30:00Z" }`
+- Aşama 6 ile isteğe bağlı iki alan (istek ve yanıtta; eski kayıtlarda `null` / `[]`):
+  `"uzerinden": { "ad": "Aksaray", "enlem": 38.37, "boylam": 34.03 }` ve
+  `"duraklar": [ { "id": 118, "ad": "Kırşehir Kalesi", "kategori": "castle", "enlem": 39.14, "boylam": 34.16 } ]` (en fazla 10).
 
 `GET /api/rotalarim` → aynı öğelerin listesi, yeniden eskiye
 `DELETE /api/rotalarim/{id}` → 204; başkasının rotasıysa ya da yoksa 404

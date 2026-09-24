@@ -43,19 +43,56 @@ public class OpenRouteService {
 
     // Başlangıçtan bitişe araç rotası: WKT (koridor sorgusu için), koordinatlar, mesafe ve süre
     public RotaSonucu getRoute(double startLon, double startLat, double endLon, double endLat) {
+        return getRoute(List.of(List.of(startLon, startLat), List.of(endLon, endLat)));
+    }
+
+    // Ara şehir üzerinden rota: ORS tek çizgi olarak döndürür (kalkış -> ara nokta -> varış)
+    public RotaSonucu getRouteViaPoint(double startLon, double startLat, double viaLon, double viaLat,
+                                        double endLon, double endLat) {
+        return getRoute(List.of(
+                List.of(startLon, startLat),
+                List.of(viaLon, viaLat),
+                List.of(endLon, endLat)
+        ));
+    }
+
+    private RotaSonucu getRoute(List<List<Double>> coordinates) {
+        // Varsayılan 350 m: büyük ören yerlerinin (Efes) merkezi yola bu kadar yakın değil,
+        // aramada gezi yerleri de hedef olarak seçilebildiği için en yakın yol 5 km'ye kadar aranır
+        List<Integer> radiuses = coordinates.stream().map(c -> YOL_ARAMA_YARICAPI_M).toList();
         Map<String, Object> requestBody = Map.of(
-                "coordinates", List.of(
-                        List.of(startLon, startLat),
-                        List.of(endLon, endLat)
-                ),
-                // Varsayılan 350 m: büyük ören yerlerinin (Efes) merkezi yola bu kadar yakın değil,
-                // aramada gezi yerleri de hedef olarak seçilebildiği için en yakın yol 5 km'ye kadar aranır
-                "radiuses", List.of(YOL_ARAMA_YARICAPI_M, YOL_ARAMA_YARICAPI_M)
+                "coordinates", coordinates,
+                "radiuses", radiuses
         );
 
-        Map<String, Object> response;
+        Map<String, Object> response = istekGonder(requestBody);
+        return parseRouteResponse(response);
+    }
+
+    public String getRouteWkt(double startLon, double startLat, double endLon, double endLat) {
+        return getRoute(startLon, startLat, endLon, endLat).wkt();
+    }
+
+    // Aynı istekte ana rotayı da döndürür (ilk feature); yalnızca ORS'un onayladığı ~100 km'e kadar
+    // yaklaşık mesafedeki çiftlerde çalışır, üstünde 400 (hata kodu 2004) döner.
+    public List<RotaSonucu> getAlternativeRoutes(double startLon, double startLat, double endLon, double endLat) {
+        Map<String, Object> requestBody = Map.of(
+                "coordinates", List.of(List.of(startLon, startLat), List.of(endLon, endLat)),
+                "radiuses", List.of(YOL_ARAMA_YARICAPI_M, YOL_ARAMA_YARICAPI_M),
+                "alternative_routes", Map.of(
+                        "target_count", 3,
+                        "share_factor", 0.6,
+                        "weight_factor", 1.6
+                )
+        );
+
+        Map<String, Object> response = istekGonder(requestBody);
+        return parseAlternativeRoutes(response);
+    }
+
+    private Map<String, Object> istekGonder(Map<String, Object> requestBody) {
         try {
-            response = restClient.post()
+            return restClient.post()
                     .uri("/v2/directions/driving-car/geojson")
                     .body(requestBody)
                     .retrieve()
@@ -64,12 +101,6 @@ public class OpenRouteService {
             log.warn("ORS'a ulaşılamadı: {}", e.getMessage());
             throw new RotaServisiException(HttpStatus.GATEWAY_TIMEOUT, "Rota servisine ulaşılamadı", e);
         }
-
-        return parseRouteResponse(response);
-    }
-
-    public String getRouteWkt(double startLon, double startLat, double endLon, double endLat) {
-        return getRoute(startLon, startLat, endLon, endLat).wkt();
     }
 
     private void hatayiCevir(HttpRequest request, ClientHttpResponse response) throws IOException {
@@ -101,7 +132,23 @@ public class OpenRouteService {
             throw new RotaServisiException(HttpStatus.NOT_FOUND, "Bu iki nokta arasında rota bulunamadı");
         }
 
-        Map<String, Object> feature = features.get(0);
+        return featureToRotaSonucu(features.get(0));
+    }
+
+    // alternative_routes ile gelen yanıtta ilk feature ana rota, sonrakiler alternatiflerdir
+    @SuppressWarnings("unchecked")
+    private List<RotaSonucu> parseAlternativeRoutes(Map<String, Object> response) {
+        List<Map<String, Object>> features = response == null ? null
+                : (List<Map<String, Object>>) response.get("features");
+        if (features == null || features.isEmpty()) {
+            throw new RotaServisiException(HttpStatus.NOT_FOUND, "Bu iki nokta arasında rota bulunamadı");
+        }
+
+        return features.stream().map(this::featureToRotaSonucu).toList();
+    }
+
+    @SuppressWarnings("unchecked")
+    private RotaSonucu featureToRotaSonucu(Map<String, Object> feature) {
         Map<String, Object> geometry = (Map<String, Object>) feature.get("geometry");
         Map<String, Object> properties = (Map<String, Object>) feature.get("properties");
         Map<String, Object> summary = properties == null ? null

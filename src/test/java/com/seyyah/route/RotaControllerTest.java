@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -34,12 +35,17 @@ class RotaControllerTest {
     private OpenRouteService openRouteService;
 
     @MockBean
+    private AlternatifRotaServisi alternatifRotaServisi;
+
+    @MockBean
     private PlaceRepository placeRepository;
 
     @Test
     void rotaBasarili() throws Exception {
-        given(openRouteService.getRoute(29.0, 41.0, 32.0, 39.0))
-                .willReturn(new RotaSonucu("wkt", List.of(List.of(29.0, 41.0), List.of(32.0, 39.0)), 1000.0, 500.0));
+        RotaSonucu ana = new RotaSonucu("wkt", List.of(List.of(29.0, 41.0), List.of(32.0, 39.0)), 1000.0, 500.0);
+        given(openRouteService.getRoute(29.0, 41.0, 32.0, 39.0)).willReturn(ana);
+        given(alternatifRotaServisi.alternatifleriBul(eq(ana), anyDouble(), anyDouble(), anyDouble(), anyDouble()))
+                .willReturn(List.of());
 
         given(placeRepository.koridorda("wkt", "gezi", 5000, 20)).willReturn(List.of());
         given(placeRepository.koridorda("wkt", "mola", 5000, 20)).willReturn(List.of());
@@ -47,17 +53,40 @@ class RotaControllerTest {
 
         mvc.perform(get("/api/rota?kalkisEnlem=41.0&kalkisBoylam=29.0&varisEnlem=39.0&varisBoylam=32.0&yaricap=5000&limit=20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.mesafeM").value(1000.0))
-                .andExpect(jsonPath("$.sureSn").value(500.0))
-                .andExpect(jsonPath("$.geometri").isArray())
-                .andExpect(jsonPath("$.yerler.gezi").isArray())
-                .andExpect(jsonPath("$.yerler.mola").isArray())
-                .andExpect(jsonPath("$.yerler.destek").isArray());
+                .andExpect(jsonPath("$.rotalar").isArray())
+                .andExpect(jsonPath("$.rotalar.length()").value(1))
+                .andExpect(jsonPath("$.rotalar[0].sira").value(0))
+                .andExpect(jsonPath("$.rotalar[0].ad").value("En hızlı"))
+                .andExpect(jsonPath("$.rotalar[0].uzerinden").doesNotExist())
+                .andExpect(jsonPath("$.rotalar[0].mesafeM").value(1000.0))
+                .andExpect(jsonPath("$.rotalar[0].sureSn").value(500.0))
+                .andExpect(jsonPath("$.rotalar[0].geometri").isArray())
+                .andExpect(jsonPath("$.rotalar[0].yerler.gezi").isArray())
+                .andExpect(jsonPath("$.rotalar[0].yerler.mola").isArray())
+                .andExpect(jsonPath("$.rotalar[0].yerler.destek").isArray());
 
         verify(openRouteService).getRoute(29.0, 41.0, 32.0, 39.0);
         verify(placeRepository).koridorda("wkt", "gezi", 5000, 20);
         verify(placeRepository).koridorda("wkt", "mola", 5000, 20);
         verify(placeRepository).koridorda("wkt", "destek", 5000, 20);
+    }
+
+    @Test
+    void alternatifRotalarSirayaEklenir() throws Exception {
+        RotaSonucu ana = new RotaSonucu("ana-wkt", List.of(List.of(29.0, 41.0), List.of(32.0, 39.0)), 1000.0, 500.0);
+        RotaSonucu alt = new RotaSonucu("alt-wkt", List.of(List.of(29.0, 41.0), List.of(32.0, 39.0)), 1200.0, 600.0);
+        given(openRouteService.getRoute(29.0, 41.0, 32.0, 39.0)).willReturn(ana);
+        given(alternatifRotaServisi.alternatifleriBul(eq(ana), anyDouble(), anyDouble(), anyDouble(), anyDouble()))
+                .willReturn(List.of(new AlternatifRotaServisi.RotaSecenegi(alt, "Aksaray üzerinden", "Aksaray")));
+
+        given(placeRepository.koridorda(anyString(), anyString(), anyInt(), anyInt())).willReturn(List.of());
+
+        mvc.perform(get("/api/rota?kalkisEnlem=41.0&kalkisBoylam=29.0&varisEnlem=39.0&varisBoylam=32.0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rotalar.length()").value(2))
+                .andExpect(jsonPath("$.rotalar[1].sira").value(1))
+                .andExpect(jsonPath("$.rotalar[1].ad").value("Aksaray üzerinden"))
+                .andExpect(jsonPath("$.rotalar[1].uzerinden").value("Aksaray"));
     }
 
     @Test

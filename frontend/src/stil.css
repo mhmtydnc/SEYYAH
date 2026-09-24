@@ -56,6 +56,13 @@ h1 { font-size: clamp(30px, 4vw, 48px); letter-spacing: -.04em; line-height: 1.0
 .rota-ozeti div:not(.kaydet-alani) { display: flex; flex-direction: column; gap: 3px; }
 .rota-ozeti span { font-size: 12px; color: var(--soluk); }
 .rota-ozeti strong { font-size: 21px; }
+.rota-secim-alani { display: flex; align-items: center; gap: 16px; margin-bottom: 15px; }
+.rota-kartlari { display: flex; gap: 10px; min-width: 0; flex: 1; overflow-x: auto; padding: 2px 2px 7px; }
+.rota-karti { flex: 1 0 190px; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; text-align: left; color: var(--koyu); background: #fff; border: 2px solid var(--kenar); border-radius: 12px; padding: 12px 15px; }
+.rota-karti.secili { border-color: var(--lacivert); background: #edf5f7; box-shadow: 0 2px 8px #204f6b20; }
+.rota-karti strong { font-size: 16px; }
+.rota-karti span { font-size: 14px; }
+.rota-karti small { color: var(--soluk); font-size: 12px; }
 .kaydet-alani { margin-left: auto; }
 .kaydet-alani button { border: 1px solid var(--lacivert); color: var(--lacivert); background: #fff; border-radius: 8px; padding: 10px 15px; font-weight: 700; }
 
@@ -104,16 +111,18 @@ h1 { font-size: clamp(30px, 4vw, 48px); letter-spacing: -.04em; line-height: 1.0
 .kayitli-eylemler button { border: 1px solid #cb745e; background: #fff; color: #a8422c; }
 
 @media (max-width: 1050px) {
-  .giris-bolumu { grid-template-columns: 1fr; gap: 20px; }
+  /* 1fr = minmax(auto, 1fr): sütun içeriğin en küçük genişliğinin altına inemez ve sayfa yatay taşar */
+  .giris-bolumu { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .giris-bolumu > *, .rota-formu > *, .sonuc-alani > * { min-width: 0; }
 }
 @media (max-width: 768px) {
   .ust-icerik { padding: 13px 16px; }
   .ust-cubuk nav { gap: 12px; font-size: 13px; }
   .kullanici-adi { display: none; }
   .ana-sayfa, .icerik-sayfasi { padding: 18px 14px; }
-  .rota-formu { grid-template-columns: 1fr 1fr; }
+  .rota-formu { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .rota-formu .birincil { width: 100%; }
-  .sonuc-alani { grid-template-columns: 1fr; }
+  .sonuc-alani { grid-template-columns: minmax(0, 1fr); }
   .harita-kutusu, .harita { min-height: 350px; height: 350px; }
   .yer-paneli { max-height: none; }
   .yer-listesi { max-height: 500px; }
@@ -123,12 +132,14 @@ h1 { font-size: clamp(30px, 4vw, 48px); letter-spacing: -.04em; line-height: 1.0
   .logo { font-size: 21px; }
   .ust-cubuk nav { gap: 8px; font-size: 12px; }
   .kayit-baglanti { padding: 8px 10px; }
-  .rota-formu { grid-template-columns: 1fr; }
+  .rota-formu { grid-template-columns: minmax(0, 1fr); }
   .rota-formu .birincil { width: 100%; }
   .sonuc-alani { display: flex; flex-direction: column; }
   .harita-kutusu, .harita { height: 55vh; min-height: 55vh; }
   .yer-paneli { order: 2; }
   .rota-ozeti { flex-wrap: wrap; gap: 15px 25px; }
+  .rota-secim-alani { align-items: stretch; flex-direction: column; }
+  .rota-karti { flex: 0 0 190px; }
   .kaydet-alani { flex-basis: 100%; margin-left: 0; }
   .kayitli-kart { align-items: flex-start; flex-direction: column; }
 }
