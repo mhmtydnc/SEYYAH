@@ -15,4 +15,9 @@ public class ApiHataYakalayici extends ResponseEntityExceptionHandler {
     public ProblemDetail rotaServisi(RotaServisiException e) {
         return ProblemDetail.forStatusAndDetail(e.getStatus(), e.getMessage());
     }
+
+    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
+    public ProblemDetail dogrulamaHatasi(jakarta.validation.ConstraintViolationException e) {
+        return ProblemDetail.forStatusAndDetail(org.springframework.http.HttpStatus.BAD_REQUEST, e.getMessage());
+    }
 }
