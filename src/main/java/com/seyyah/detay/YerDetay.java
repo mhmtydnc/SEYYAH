@@ -11,5 +11,6 @@ public record YerDetay(
         String calismaSaatleri,
         String website,
         WikidataDetay wikidata,
-        GoogleDetay google
+        GoogleDetay google,
+        OzetDetay ozet
 ) {}

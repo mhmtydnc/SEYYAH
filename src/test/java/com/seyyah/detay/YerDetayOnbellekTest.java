@@ -104,4 +104,38 @@ class YerDetayOnbellekTest extends PostgisTestDestegi {
                 .param(yerId).query(Boolean.class).single();
         assertThat(halaEski).isTrue();
     }
+
+    @MockitoBean
+    private OzetServisi ozetServisi;
+
+    @Test
+    void ozetBirKezUretilirIkinciIstekteCagrilmaz() {
+        jdbcClient.sql("UPDATE places SET wikidata_id = 'Q123' WHERE id = ?").param(yerId).update();
+        
+        WikidataDetay wikidata = new WikidataDetay("aciklama", "https://tr.wikipedia.org/wiki/Test", null);
+        given(wikidataServisi.detayGetir("Q123")).willReturn(wikidata);
+        
+        OzetDetay ozet = new OzetDetay("Özet", "https://tr.wikipedia.org/wiki/Test");
+        given(ozetServisi.ozetUret(wikidata)).willReturn(ozet);
+        
+        assertThat(servis.detayGetir(yerId).ozet()).isNotNull();
+        assertThat(servis.detayGetir(yerId).ozet()).isNotNull();
+        
+        verify(ozetServisi, times(1)).ozetUret(any());
+    }
+
+    @Test
+    void ozetHataSonucuOnbellegeYazilmaz() {
+        jdbcClient.sql("UPDATE places SET wikidata_id = 'Q123' WHERE id = ?").param(yerId).update();
+        
+        WikidataDetay wikidata = new WikidataDetay("aciklama", "https://tr.wikipedia.org/wiki/Test", null);
+        given(wikidataServisi.detayGetir("Q123")).willReturn(wikidata);
+        
+        given(ozetServisi.ozetUret(wikidata)).willThrow(new RuntimeException("API error"));
+        
+        assertThat(servis.detayGetir(yerId).ozet()).isNull();
+        assertThat(servis.detayGetir(yerId).ozet()).isNull();
+        
+        verify(ozetServisi, times(2)).ozetUret(any());
+    }
 }
