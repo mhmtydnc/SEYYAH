@@ -28,7 +28,7 @@ public class YerDetayControllerTest {
 
     @Test
     void testBasariliDetay() throws Exception {
-        YerDetay detay = new YerDetay(1L, "Test", "kategori", "gezi", 39.0, 35.0, null, null, null, null, null);
+        YerDetay detay = new YerDetay(1L, "Test", "kategori", "gezi", 39.0, 35.0, null, null, null, null, null, null);
         when(yerDetayServisi.detayGetir(1L)).thenReturn(detay);
 
         mockMvc.perform(get("/api/yerler/1/detay"))

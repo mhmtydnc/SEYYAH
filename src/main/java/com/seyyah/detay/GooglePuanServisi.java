@@ -59,7 +59,7 @@ public class GooglePuanServisi {
                 Map<String, Object> response = restClient.post()
                         .uri(url)
                         .header("X-Goog-Api-Key", apiKey)
-                        .header("X-Goog-FieldMask", "places.id,places.rating,places.userRatingCount,places.googleMapsUri,places.location")
+                        .header("X-Goog-FieldMask", "places.id,places.rating,places.userRatingCount,places.googleMapsUri,places.location,places.reviews")
                         .body(body)
                         .retrieve()
                         .body(new ParameterizedTypeReference<>() {});
@@ -89,7 +89,7 @@ public class GooglePuanServisi {
                 Map<String, Object> place = restClient.get()
                         .uri(url)
                         .header("X-Goog-Api-Key", apiKey)
-                        .header("X-Goog-FieldMask", "rating,userRatingCount,googleMapsUri")
+                        .header("X-Goog-FieldMask", "rating,userRatingCount,googleMapsUri,reviews")
                         .retrieve()
                         .body(new ParameterizedTypeReference<>() {});
                 
@@ -111,7 +111,37 @@ public class GooglePuanServisi {
         Integer yorumSayisi = place.containsKey("userRatingCount") ? ((Number) place.get("userRatingCount")).intValue() : 0;
         String harita = (String) place.get("googleMapsUri");
         
-        return new GoogleDetay(puan, yorumSayisi, harita);
+        java.util.List<GoogleYorum> yorumlar = new java.util.ArrayList<>();
+        if (place.containsKey("reviews") && place.get("reviews") instanceof List<?> rList) {
+            for (Object rObj : rList) {
+                if (yorumlar.size() >= 3) break;
+                if (rObj instanceof Map<?, ?> rMap) {
+                    String yazar = null;
+                    String yazarBaglantisi = null;
+                    if (rMap.get("authorAttribution") instanceof Map<?, ?> authMap) {
+                        yazar = (String) authMap.get("displayName");
+                        yazarBaglantisi = (String) authMap.get("uri");
+                    }
+                    Integer rPuan = null;
+                    if (rMap.get("rating") instanceof Number num) {
+                        rPuan = num.intValue();
+                    }
+                    String metin = null;
+                    if (rMap.get("text") instanceof Map<?, ?> tMap) {
+                        metin = (String) tMap.get("text");
+                    } else if (rMap.get("originalText") instanceof Map<?, ?> oMap) {
+                        metin = (String) oMap.get("text");
+                    }
+                    if (metin != null && metin.length() > 600) {
+                        metin = metin.substring(0, 600);
+                    }
+                    String zaman = (String) rMap.get("relativePublishTimeDescription");
+                    yorumlar.add(new GoogleYorum(yazar, yazarBaglantisi, rPuan, metin, zaman));
+                }
+            }
+        }
+        
+        return new GoogleDetay(puan, yorumSayisi, harita, yorumlar);
     }
 
     private boolean kotaArtirVeKontrolEt() {
