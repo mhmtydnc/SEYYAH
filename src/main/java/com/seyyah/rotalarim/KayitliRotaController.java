@@ -38,6 +38,10 @@ public class KayitliRotaController {
         rota.setVarisAd(istek.varis().ad());
         rota.setVarisEnlem(istek.varis().enlem());
         rota.setVarisBoylam(istek.varis().boylam());
+        rota.setUzerinden(istek.uzerinden());
+        if (istek.duraklar() != null) {
+            rota.setDuraklar(istek.duraklar());
+        }
 
         return RotaYaniti.olustur(repo.save(rota));
     }

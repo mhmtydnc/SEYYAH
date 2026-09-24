@@ -11,6 +11,7 @@ public record RotaYaniti(List<Rota> rotalar) {
             int sira,
             String ad,
             String uzerinden,
+            AraNokta araNokta,
             double mesafeM,
             double sureSn,
             List<List<Double>> geometri,
