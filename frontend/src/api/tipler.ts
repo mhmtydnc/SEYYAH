@@ -25,6 +25,15 @@ export interface KoridorYeri {
   website: string | null
 }
 
+export interface YerDetayi extends Pick<KoridorYeri, 'id' | 'ad' | 'kategori' | 'tur' | 'enlem' | 'boylam' | 'ucret' | 'calismaSaatleri' | 'website'> {
+  wikidata: {
+    aciklama: string | null
+    vikipedi: string | null
+    gorsel: { url: string; sayfa: string; yazar: string | null; lisans: string | null } | null
+  } | null
+  google: { puan: number; yorumSayisi: number; haritaBaglantisi: string | null } | null
+}
+
 export interface Rota {
   sira: number
   ad: string
