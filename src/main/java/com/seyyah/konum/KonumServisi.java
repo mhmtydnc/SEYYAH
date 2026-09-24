@@ -13,6 +13,7 @@ import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -26,11 +27,14 @@ public class KonumServisi {
     private static final Logger log = LoggerFactory.getLogger(KonumServisi.class);
 
     private final RestClient restClient;
+    private final JdbcClient jdbcClient;
 
     public KonumServisi(
             RestClient.Builder builder,
+            JdbcClient jdbcClient,
             @Value("${ors.api.url}") String apiUrl,
             @Value("${ors.api.key}") String apiKey) {
+        this.jdbcClient = jdbcClient;
         this.restClient = builder
                 .baseUrl(apiUrl)
                 .defaultHeader(HttpHeaders.AUTHORIZATION, apiKey)
@@ -41,6 +45,65 @@ public class KonumServisi {
 
     @SuppressWarnings("unchecked")
     public List<KonumSonucu> ara(String q, int size) {
+        List<KonumSonucu> dbSonuclar = jdbcClient.sql("""
+                WITH q_yerlesim AS (
+                    SELECT
+                        ad,
+                        CASE
+                            WHEN il IS NOT NULL AND il != ad THEN ad || ', ' || il
+                            WHEN tur = 'city' THEN ad || ' (şehir)'
+                            WHEN tur = 'town' THEN ad || ' (ilçe/kasaba)'
+                            WHEN tur = 'suburb' THEN ad || ' (mahalle)'
+                            WHEN tur = 'village' THEN ad || ' (köy)'
+                            ELSE ad || ' (' || tur || ')'
+                        END AS etiket,
+                        ST_Y(konum::geometry) AS enlem,
+                        ST_X(konum::geometry) AS boylam,
+                        onem,
+                        nufus,
+                        1 AS tip_sirasi,
+                        CASE WHEN lower(f_unaccent(ad)) LIKE lower(f_unaccent(:q)) || '%' THEN 1 ELSE 0 END AS onek_eslesme,
+                        similarity(lower(f_unaccent(ad)), lower(f_unaccent(:q))) AS benzerlik
+                    FROM yerlesimler
+                    WHERE lower(f_unaccent(ad)) LIKE lower(f_unaccent(:q)) || '%' OR lower(f_unaccent(ad)) % lower(f_unaccent(:q))
+                ),
+                q_gezi AS (
+                    SELECT
+                        ad,
+                        ad || ' (' || kategori || ')' AS etiket,
+                        ST_Y(konum::geometry) AS enlem,
+                        ST_X(konum::geometry) AS boylam,
+                        0 AS onem,
+                        0 AS nufus,
+                        2 AS tip_sirasi,
+                        CASE WHEN lower(f_unaccent(ad)) LIKE lower(f_unaccent(:q)) || '%' THEN 1 ELSE 0 END AS onek_eslesme,
+                        similarity(lower(f_unaccent(ad)), lower(f_unaccent(:q))) AS benzerlik
+                    FROM places
+                    WHERE tur = 'gezi' AND (lower(f_unaccent(ad)) LIKE lower(f_unaccent(:q)) || '%' OR lower(f_unaccent(ad)) % lower(f_unaccent(:q)))
+                )
+                SELECT ad, etiket, enlem, boylam
+                FROM (
+                    SELECT * FROM q_yerlesim
+                    UNION ALL
+                    SELECT * FROM q_gezi
+                ) birlesik
+                ORDER BY
+                    onek_eslesme DESC,
+                    tip_sirasi ASC,
+                    onem DESC,
+                    nufus DESC NULLS LAST,
+                    benzerlik DESC
+                LIMIT :limit
+                """)
+                .param("q", q)
+                .param("limit", size)
+                .query(KonumSonucu.class)
+                .list();
+
+        if (!dbSonuclar.isEmpty()) {
+            return dbSonuclar;
+        }
+
         Map<String, Object> response;
         try {
             response = restClient.get()
@@ -52,9 +115,9 @@ public class KonumServisi {
                             .build())
                     .retrieve()
                     .body(Map.class);
-        } catch (ResourceAccessException e) {
-            log.warn("ORS'a ulaşılamadı: {}", e.getMessage());
-            throw new RotaServisiException(HttpStatus.GATEWAY_TIMEOUT, "Konum servisine ulaşılamadı", e);
+        } catch (Exception e) {
+            log.warn("ORS'a ulaşılamadı veya hata verdi, boş liste dönülüyor: {}", e.getMessage());
+            return List.of();
         }
 
         if (response == null) {
