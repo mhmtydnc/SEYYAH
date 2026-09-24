@@ -14,22 +14,26 @@ Backend ve frontend bu dosyaya göre paralel geliştirilir. Değişiklik gerekir
 ```
 ORS `/geocode/autocomplete` üzerinden, Türkiye ile sınırlı (`boundary.country=TR`). Sonuç yoksa `[]`.
 
-## Rota (herkese açık)
+## Rota (herkese açık) — Aşama 5: alternatifli
 `GET /api/rota?kalkisEnlem&kalkisBoylam&varisEnlem&varisBoylam&yaricap=5000&limit=20`
 - `limit`: her tür için en fazla yer sayısı (1–100), `yaricap`: 100–20000 m
 ```json
 {
-  "mesafeM": 452310,
-  "sureSn": 17820,
-  "geometri": [[29.01, 41.00], [29.05, 40.98]],
-  "yerler": {
-    "gezi":   [ /* KoridorYeri */ ],
-    "mola":   [ /* KoridorYeri */ ],
-    "destek": [ /* KoridorYeri */ ]
-  }
+  "rotalar": [
+    { "sira": 0, "ad": "En hızlı", "uzerinden": null,
+      "mesafeM": 296400, "sureSn": 11400,
+      "geometri": [[32.85, 39.92], [32.90, 39.88]],
+      "yerler": { "gezi": [ /* KoridorYeri */ ], "mola": [], "destek": [] } },
+    { "sira": 1, "ad": "Aksaray üzerinden", "uzerinden": "Aksaray",
+      "mesafeM": 331200, "sureSn": 12900, "geometri": [], "yerler": { "gezi": [], "mola": [], "destek": [] } }
+  ]
 }
 ```
-`geometri`: GeoJSON sırası `[boylam, enlem]`. Leaflet için `[enlem, boylam]`'a çevrilmeli.
+- `rotalar` en az 1, en fazla 3 öğe; `sira = 0` her zaman en hızlı (ana) rotadır, diğerleri süreye göre artan.
+- `ad`: ana rota `"En hızlı"`; ORS'un kendi alternatifleri `"Alternatif 1"`, `"Alternatif 2"`; ara şehirden
+  geçenler `"<Şehir> üzerinden"` (`uzerinden` alanında şehir adı).
+- Alternatif bulunamazsa ya da alternatif hesaplama hata verirse yalnızca ana rota döner (istek hata vermez).
+- `geometri`: GeoJSON sırası `[boylam, enlem]`. Leaflet için `[enlem, boylam]`'a çevrilmeli.
 
 `KoridorYeri`:
 ```json
