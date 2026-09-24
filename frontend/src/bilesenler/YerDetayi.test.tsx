@@ -1,7 +1,12 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it } from 'vitest'
+// @vitest-environment jsdom
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { api, IstekHatasi } from '../api/istemci'
 import type { KoridorYeri, YerDetayi as YerDetayiTipi } from '../api/tipler'
-import { YerDetayiIcerigi } from './YerDetayi'
+import { YerDetayiIcerigi, YerSorulari } from './YerDetayi'
+
+afterEach(cleanup)
 
 const yer: KoridorYeri = {
   id: 118, ad: 'Kırşehir Kalesi', kategori: 'castle', tur: 'gezi', enlem: 39.14, boylam: 34.16,
@@ -71,5 +76,31 @@ describe('Yer detayı koşullu bölümleri', () => {
     expect(html).toContain('commons.wikimedia.org')
     expect(html).toContain('Google')
     expect(html).toContain('1.234 değerlendirme')
+  })
+})
+
+describe('yer soru bolumu', () => {
+  beforeEach(() => vi.restoreAllMocks())
+  it('hazir soruyu dogru uca gonderir ve tekrari onbellekten yanitlar', async () => {
+    const istek = vi.spyOn(api, 'hazirSoruSor').mockResolvedValue({ cevap: 'Evet, gormeye deger.', onbellekten: false })
+    render(<YerSorulari yerKimligi={84721} girisYapilmis={false} />)
+    const dugme = screen.getAllByRole('button')[0]
+    fireEvent.click(dugme)
+    expect(await screen.findByText('Evet, gormeye deger.')).toBeTruthy()
+    expect(istek).toHaveBeenCalledWith(84721, 'deger')
+    fireEvent.click(dugme)
+    await waitFor(() => expect(screen.getAllByText('Evet, gormeye deger.')).toHaveLength(2))
+    expect(istek).toHaveBeenCalledTimes(1)
+  })
+  it('giris yokken serbest soru alani yerine giris baglantisi gosterir', () => {
+    render(<YerSorulari yerKimligi={84722} girisYapilmis={false} />)
+    expect(screen.queryByLabelText('Kendi sorun')).toBeNull()
+    expect(screen.getByRole('link').getAttribute('href')).toBe('/giris')
+  })
+  it('429 yanitinda sinir mesajini gosterir', async () => {
+    vi.spyOn(api, 'hazirSoruSor').mockRejectedValue(new IstekHatasi('Limit', 429))
+    render(<YerSorulari yerKimligi={84723} girisYapilmis={false} />)
+    fireEvent.click(screen.getAllByRole('button')[0])
+    expect((await screen.findByRole('alert')).textContent).toMatch(/fazla soru/)
   })
 })

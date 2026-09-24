@@ -119,3 +119,19 @@ Hatalar: 400 geçersiz parametre, 404 rota bulunamadı, 503 kota doldu, 502/504 
   üretilemediyse `null`. Arayüz altına "Yapay zekâ ile Vikipedi'den özetlendi" ve Vikipedi bağlantısını yazar.
 - `google.yorumlar`: en fazla 3 yorum (Google'ın döndürdüğü sırayla); yoksa `[]`. Arayüz yazar adını bağlantısıyla ve
   "Google" atfıyla gösterir.
+
+## Yere soru sor (Gemini) — Aşama 9
+**Hazır soru (herkese açık, önbellekli):** `POST /api/yerler/{id}/hazir-soru` → `{ "soru": "sure" }`
+- `soru` ∈ `deger` (Görmeye değer mi?), `sure` (Ne kadar zaman ayırmalıyım?), `cocuk` (Çocuklarla uygun mu?),
+  `ipucu` (Ziyaret için ipuçları). Başka değer → 400.
+- Cevap yer + soru başına süresiz önbelleklenir; ikinci istek Gemini'ye gitmez.
+
+**Serbest soru (giriş gerekli):** `POST /api/uye/yerler/{id}/soru` → `{ "metin": "Akşam gidilir mi?" }`
+- `metin` 3–200 karakter. Önbelleklenmez. Kullanıcı başına saatte en fazla 10 → fazlası 429.
+
+Her ikisinin yanıtı: `{ "cevap": "3-4 cümlelik Türkçe yanıt", "onbellekten": true }`
+- 404 yer yok; 429 kişisel ya da günlük sınır doldu; 503 Gemini şu an yanıt vermiyor ya da anahtar tanımlı değil.
+- Gemini'ye yalnızca yerin bilgileri (ad, kategori, çalışma saatleri, ücret, Vikipedi giriş metni) ve soru gider;
+  yanıt yalnızca bu bilgilere dayanır, bilgi yoksa bunu söyler, yerle ilgisiz soruyu kibarca geri çevirir.
+
+**Aşama 9'da kaldırılan:** Google yorumları (hesapta veri dönmüyor; `reviews` alanı istekten çıkarıldı, `google.yorumlar` her zaman `[]`).
