@@ -2,6 +2,7 @@ package com.seyyah.kullanici;
 
 import com.seyyah.hata.ApiIstisnasi;
 import jakarta.validation.Valid;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -12,6 +13,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Locale;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -30,7 +33,7 @@ public class AuthController {
 
     @PostMapping("/kayit")
     public ResponseEntity<KimlikYaniti> kayit(@Valid @RequestBody KayitIstegi istek) {
-        String eposta = istek.eposta().toLowerCase();
+        String eposta = kucukHarf(istek.eposta());
         if (kullaniciRepository.findByEposta(eposta).isPresent()) {
             throw new ApiIstisnasi(HttpStatus.CONFLICT, "Bu e-posta adresi zaten kayıtlı");
         }
@@ -39,7 +42,12 @@ public class AuthController {
         kullanici.setAd(istek.ad());
         kullanici.setEposta(eposta);
         kullanici.setSifreOzeti(sifreKodlayici.encode(istek.sifre()));
-        kullanici = kullaniciRepository.save(kullanici);
+        try {
+            kullanici = kullaniciRepository.saveAndFlush(kullanici);
+        } catch (DataIntegrityViolationException e) {
+            // Aynı e-postayla eşzamanlı iki kayıt: yukarıdaki kontrolü ikisi de geçmiş olabilir
+            throw new ApiIstisnasi(HttpStatus.CONFLICT, "Bu e-posta adresi zaten kayıtlı");
+        }
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new KimlikYaniti(jwtServisi.uret(kullanici), KullaniciOzet.olustur(kullanici)));
@@ -47,7 +55,7 @@ public class AuthController {
 
     @PostMapping("/giris")
     public KimlikYaniti giris(@Valid @RequestBody GirisIstegi istek) {
-        Kullanici kullanici = kullaniciRepository.findByEposta(istek.eposta().toLowerCase())
+        Kullanici kullanici = kullaniciRepository.findByEposta(kucukHarf(istek.eposta()))
                 .filter(k -> sifreKodlayici.matches(istek.sifre(), k.getSifreOzeti()))
                 .orElseThrow(() -> new ApiIstisnasi(HttpStatus.UNAUTHORIZED, "E-posta veya şifre hatalı"));
 
@@ -60,5 +68,10 @@ public class AuthController {
                 .orElseThrow(() -> new ApiIstisnasi(HttpStatus.UNAUTHORIZED, "Kullanıcı bulunamadı"));
 
         return KullaniciOzet.olustur(kullanici);
+    }
+
+    // Locale.ROOT şart: Türkçe sistemde "I" → "ı" olur ve kullanıcı giriş yapamaz
+    private static String kucukHarf(String eposta) {
+        return eposta.trim().toLowerCase(Locale.ROOT);
     }
 }

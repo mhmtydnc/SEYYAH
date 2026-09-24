@@ -35,12 +35,15 @@ class OpenRouteServiceTest {
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header(HttpHeaders.AUTHORIZATION, "test-anahtar"))
                 .andRespond(withSuccess("""
-                        {"type":"FeatureCollection","features":[{"geometry":{"type":"LineString",
+                        {"type":"FeatureCollection","features":[{"properties":{"summary":{"distance":120.5,"duration":300}},"geometry":{"type":"LineString",
                          "coordinates":[[29.0,41.0],[29.5,40.5],[32,39.9]]}}]}
                         """, MediaType.APPLICATION_JSON));
 
-        assertThat(servis.getRouteWkt(29.0, 41.0, 32.0, 39.9))
-                .isEqualTo("SRID=4326;LINESTRING(29.0 41.0, 29.5 40.5, 32 39.9)");
+        RotaSonucu sonuc = servis.getRoute(29.0, 41.0, 32.0, 39.9);
+        assertThat(sonuc.wkt()).isEqualTo("SRID=4326;LINESTRING(29.0 41.0, 29.5 40.5, 32.0 39.9)");
+        assertThat(sonuc.mesafeM()).isEqualTo(120.5);
+        assertThat(sonuc.sureSn()).isEqualTo(300);
+        assertThat(sonuc.koordinatlar()).hasSize(3);
     }
 
     @Test

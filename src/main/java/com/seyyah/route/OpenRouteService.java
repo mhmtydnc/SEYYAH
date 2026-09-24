@@ -15,6 +15,7 @@ import org.springframework.web.client.RestClient;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -38,8 +39,8 @@ public class OpenRouteService {
                 .build();
     }
 
-    // Başlangıçtan bitişe araç rotasını "SRID=4326;LINESTRING(...)" olarak döndürür
-    public String getRouteWkt(double startLon, double startLat, double endLon, double endLat) {
+    // Başlangıçtan bitişe araç rotası: WKT (koridor sorgusu için), koordinatlar, mesafe ve süre
+    public RotaSonucu getRoute(double startLon, double startLat, double endLon, double endLat) {
         Map<String, Object> requestBody = Map.of(
                 "coordinates", List.of(
                         List.of(startLon, startLat),
@@ -59,7 +60,11 @@ public class OpenRouteService {
             throw new RotaServisiException(HttpStatus.GATEWAY_TIMEOUT, "Rota servisine ulaşılamadı", e);
         }
 
-        return extractWktFromGeoJson(response);
+        return parseRouteResponse(response);
+    }
+
+    public String getRouteWkt(double startLon, double startLat, double endLon, double endLat) {
+        return getRoute(startLon, startLat, endLon, endLat).wkt();
     }
 
     private void hatayiCevir(HttpRequest request, ClientHttpResponse response) throws IOException {
@@ -84,27 +89,40 @@ public class OpenRouteService {
     }
 
     @SuppressWarnings("unchecked")
-    private String extractWktFromGeoJson(Map<String, Object> response) {
+    private RotaSonucu parseRouteResponse(Map<String, Object> response) {
         List<Map<String, Object>> features = response == null ? null
                 : (List<Map<String, Object>>) response.get("features");
         if (features == null || features.isEmpty()) {
             throw new RotaServisiException(HttpStatus.NOT_FOUND, "Bu iki nokta arasında rota bulunamadı");
         }
 
-        // Tek rota istendiği için ilk feature güzergahtır
-        Map<String, Object> geometry = (Map<String, Object>) features.get(0).get("geometry");
+        Map<String, Object> feature = features.get(0);
+        Map<String, Object> geometry = (Map<String, Object>) feature.get("geometry");
+        Map<String, Object> properties = (Map<String, Object>) feature.get("properties");
+        Map<String, Object> summary = properties == null ? null
+                : (Map<String, Object>) properties.get("summary");
+
         // Number: JSON'da tam sayı gelen koordinat Integer olarak ayrıştırılır
         List<List<Number>> coords = (List<List<Number>>) geometry.get("coordinates");
 
         StringBuilder sb = new StringBuilder("SRID=4326;LINESTRING(");
+        List<List<Double>> jsonCoords = new ArrayList<>();
         for (int i = 0; i < coords.size(); i++) {
             List<Number> pt = coords.get(i);
-            sb.append(pt.get(0)).append(" ").append(pt.get(1));
+            double lon = pt.get(0).doubleValue();
+            double lat = pt.get(1).doubleValue();
+            sb.append(lon).append(" ").append(lat);
             if (i < coords.size() - 1) {
                 sb.append(", ");
             }
+            jsonCoords.add(List.of(lon, lat));
         }
         sb.append(")");
-        return sb.toString();
+
+        // Aynı noktadan aynı noktaya rotada ORS özetinde mesafe/süre olmayabilir
+        double distance = summary != null && summary.get("distance") instanceof Number n ? n.doubleValue() : 0.0;
+        double duration = summary != null && summary.get("duration") instanceof Number n ? n.doubleValue() : 0.0;
+
+        return new RotaSonucu(sb.toString(), jsonCoords, distance, duration);
     }
 }

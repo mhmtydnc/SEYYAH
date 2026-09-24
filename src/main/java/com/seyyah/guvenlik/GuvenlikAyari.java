@@ -37,7 +37,12 @@ public class GuvenlikAyari {
 
     @Bean
     public SecretKeySpec jwtAnahtari(@Value("${jwt.gizli}") String gizliAnahtar) {
-        return new SecretKeySpec(gizliAnahtar.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        byte[] anahtar = gizliAnahtar.getBytes(StandardCharsets.UTF_8);
+        // HS256 en az 256 bit ister; kısa anahtar ilk girişte 500 yerine açılışta anlaşılır bir hata versin
+        if (anahtar.length < 32) {
+            throw new IllegalStateException("JWT_SECRET en az 32 bayt olmalı");
+        }
+        return new SecretKeySpec(anahtar, "HmacSHA256");
     }
 
     @Bean

@@ -44,3 +44,5 @@ application-local.yaml
 tools/takim/kullanim.log
 tools/takim/.soguma-*
 tools/takim/raporlar/
+
+.claude/worktrees/

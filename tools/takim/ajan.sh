@@ -59,7 +59,7 @@ case "$AJAN" in
     codex exec -m "$MODEL" -c model_reasoning_effort="$EFOR" \
       --ignore-user-config -c 'windows.sandbox="elevated"' \
       -c sandbox_workspace_write.network_access=true \
-      --sandbox workspace-write -C "$WT" -o "$RAPOR" - < "$ISTEM" >"$CIKTI" 2>&1
+      --sandbox workspace-write -C "$WT" --add-dir "$KOK/.git" -o "$RAPOR" - < "$ISTEM" >"$CIKTI" 2>&1
     KOD=$? ;;
   gemini)
     ( cd "$WT" && "$AGY" -p "$(cat "$ISTEM")" --model "$MODEL" \
@@ -73,7 +73,8 @@ TOKEN=$(grep -A1 -i '^tokens used' "$CIKTI" | tail -1 | tr -dc '0-9')
 printf '%s\t%s\t%s\t%s\t%ss\tkod=%s\ttoken=%s\n' \
   "$BASLA" "$AJAN" "$MODEL" "$GOREV" "$SURE" "$KOD" "${TOKEN:-?}" >> "$LOG"
 
-if grep -qiE 'usage limit|rate limit|quota|resource.?exhausted|429' "$CIKTI"; then
+# Sadece başarısız çağrıda bak: ajanın yazdığı kod da "429" gibi metinler içerebilir
+if (( KOD != 0 )) && tail -30 "$CIKTI" | grep -qiE 'usage limit|rate limit|quota|resource.?exhausted'; then
   echo $(( $(date +%s) + 3600 )) > "$SOGUMA"
   echo "UYARI: $AJAN limit mesajı verdi, 1 saat soğumaya alındı." >&2
 fi

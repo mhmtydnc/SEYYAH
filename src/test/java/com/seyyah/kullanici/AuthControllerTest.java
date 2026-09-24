@@ -14,6 +14,7 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -38,7 +39,7 @@ class AuthControllerTest {
     @Test
     void kayitBasariylaOlusturulurVe201Doner() throws Exception {
         when(kullaniciRepository.findByEposta("mehmet@ornek.com")).thenReturn(Optional.empty());
-        when(kullaniciRepository.save(any(Kullanici.class))).thenAnswer(cagri -> {
+        when(kullaniciRepository.saveAndFlush(any(Kullanici.class))).thenAnswer(cagri -> {
             Kullanici kullanici = cagri.getArgument(0);
             kullanici.setId(1L);
             return kullanici;
@@ -52,6 +53,24 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.token").value("test-token"))
                 .andExpect(jsonPath("$.kullanici.id").value(1))
                 .andExpect(jsonPath("$.kullanici.eposta").value("mehmet@ornek.com"));
+    }
+
+    @Test
+    void turkceSistemdeBuyukIHarfliEpostaDogruKucultulur() throws Exception {
+        java.util.Locale onceki = java.util.Locale.getDefault();
+        java.util.Locale.setDefault(java.util.Locale.forLanguageTag("tr-TR"));
+        try {
+            when(kullaniciRepository.findByEposta("info@ornek.com")).thenReturn(Optional.empty());
+
+            mvc.perform(post("/api/auth/giris")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"eposta\":\"INFO@ornek.com\",\"sifre\":\"sifre1234\"}"))
+                    .andExpect(status().isUnauthorized());
+
+            verify(kullaniciRepository).findByEposta("info@ornek.com");
+        } finally {
+            java.util.Locale.setDefault(onceki);
+        }
     }
 
     @Test
