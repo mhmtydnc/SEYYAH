@@ -41,7 +41,7 @@ ORS `/geocode/autocomplete` üzerinden, Türkiye ile sınırlı (`boundary.count
 ```json
 { "id": 1, "ad": "Anıtkabir", "kategori": "museum", "tur": "gezi", "enlem": 39.92, "boylam": 32.83,
   "yolaUzaklikM": 850, "yolOrani": 0.97, "ucret": null, "calismaSaatleri": "Mo-Su 09:00-17:00",
-  "wikidataId": "Q193230", "website": null }
+  "wikidataId": "Q615404", "website": null }
 ```
 Hatalar: 400 geçersiz parametre, 404 rota bulunamadı, 503 kota doldu, 502/504 rota servisi sorunu.
 
@@ -89,3 +89,21 @@ Hatalar: 400 geçersiz parametre, 404 rota bulunamadı, 503 kota doldu, 502/504 
 
 `GET /api/rotalarim` → aynı öğelerin listesi, yeniden eskiye
 `DELETE /api/rotalarim/{id}` → 204; başkasının rotasıysa ya da yoksa 404
+
+## Yer detayı (herkese açık) — Aşama 7
+`GET /api/yerler/{id}/detay` → yer yoksa 404.
+```json
+{ "id": 118, "ad": "Kırşehir Kalesi", "kategori": "castle", "tur": "gezi", "enlem": 39.14, "boylam": 34.16,
+  "ucret": null, "calismaSaatleri": "Tu-Su 09:00-17:00", "website": "https://...",
+  "wikidata": {
+    "aciklama": "Kırşehir'de bir kale",
+    "vikipedi": "https://tr.wikipedia.org/wiki/K%C4%B1r%C5%9Fehir_Kalesi",
+    "gorsel": { "url": "https://upload.wikimedia.org/...640px-...jpg", "sayfa": "https://commons.wikimedia.org/wiki/File:...",
+                "yazar": "Ahmet Y.", "lisans": "CC BY-SA 4.0" } },
+  "google": { "puan": 4.5, "yorumSayisi": 1234, "haritaBaglantisi": "https://maps.google.com/?cid=..." } }
+```
+- `wikidata`: yerin `wikidataId`'si yoksa ya da çekilemezse `null`. İçindeki `aciklama`, `vikipedi`, `gorsel` ayrı ayrı `null` olabilir.
+  Açıklama ve Vikipedi Türkçe öncelikli, yoksa İngilizce. Görsel P18'den, 640 px küçük boyut; yazar HTML'den arındırılmış düz metin.
+- `google`: anahtar tanımlı değilse, aylık kota dolduysa, eşleşme bulunamadıysa ya da hata olursa `null`.
+- Önbellek sunucu tarafında: Wikidata 30 gün, Google puanı en fazla 30 gün (Google kuralı), `place_id` süresiz.
+- Arayüz Google puanını gösterirken yanında "Google" atfı, görselin altında yazar ve lisans gösterir (zorunlu).

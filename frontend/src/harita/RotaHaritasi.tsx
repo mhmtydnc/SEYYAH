@@ -27,21 +27,23 @@ function HaritaOdak({ rota, kalkis, varis, seciliYer, durakliRota, siraliDurakla
   return null
 }
 
-function YerIsareti({ yer, secili, durakMi, durakDegistir, eklenebilir }: { yer: KoridorYeri; secili: boolean; durakMi: boolean; durakDegistir: (yer: KoridorYeri) => void; eklenebilir: boolean }) {
+function YerIsareti({ yer, secili, durakMi, durakDegistir, detayiAc, eklenebilir }: { yer: KoridorYeri; secili: boolean; durakMi: boolean; durakDegistir: (yer: KoridorYeri) => void; detayiAc: (yer: KoridorYeri) => void; eklenebilir: boolean }) {
   const isaret = useRef<LeafletDaire>(null)
   useEffect(() => { if (secili) isaret.current?.openPopup() }, [secili])
   return <CircleMarker ref={isaret} center={[yer.enlem, yer.boylam]} radius={secili ? 9 : 7}
     pathOptions={{ color: '#fff', weight: 2, fillColor: renkler[yer.tur], fillOpacity: 1 }}>
     <Popup><strong>{yer.ad}</strong><br />{kategoriAdi(yer.kategori)}<br />
+      <a href="#yer-detayi" onClick={(olay) => { olay.preventDefault(); detayiAc(yer) }}>Detay</a><br />
       <button type="button" disabled={!eklenebilir} onClick={() => durakDegistir(yer)}>{durakMi ? 'Duraktan çıkar' : '+ Durak ekle'}</button></Popup>
   </CircleMarker>
 }
 
-export function RotaHaritasi({ rota, seciliRota, rotaSec, kalkis, varis, seciliYer, durakliRota, siraliDuraklar, duraklar, durakDegistir, durakEklenebilir }: {
+export function RotaHaritasi({ rota, seciliRota, rotaSec, kalkis, varis, seciliYer, detayiAc, durakliRota, siraliDuraklar, duraklar, durakDegistir, durakEklenebilir }: {
   rota: RotaYaniti | null; seciliRota: Rota | null; rotaSec: (sira: number) => void;
   kalkis: Konum | null; varis: Konum | null; seciliYer: KoridorYeri | null
   durakliRota: DurakliRota | null; siraliDuraklar: SiraliNokta[]; duraklar: SeciliDurak[]; durakDegistir: (yer: KoridorYeri) => void
   durakEklenebilir: (yer: KoridorYeri) => boolean
+  detayiAc: (yer: KoridorYeri) => void
 }) {
   return <MapContainer center={[39, 35]} zoom={6} scrollWheelZoom className="harita" aria-label="Rota haritası">
     <div className="harita-lejandi" aria-label="Harita açıklaması">
@@ -69,7 +71,7 @@ export function RotaHaritasi({ rota, seciliRota, rotaSec, kalkis, varis, seciliY
         pathOptions={{ color: '#fff', weight: 2, fillColor: '#242c38', fillOpacity: 1 }}><Popup>Varış: {varis.ad}</Popup></CircleMarker>}
       {(['gezi', 'mola', 'destek'] as YerTuru[]).flatMap((tur) => (seciliRota?.yerler[tur] ?? []).map((yer) =>
         <YerIsareti key={`${tur}-${yer.id}`} yer={yer} secili={seciliYer?.id === yer.id && seciliYer?.tur === tur}
-          durakMi={duraklar.some((durak) => durak.yer.id === yer.id)} eklenebilir={durakEklenebilir(yer)} durakDegistir={durakDegistir} />))}
+          durakMi={duraklar.some((durak) => durak.yer.id === yer.id)} eklenebilir={durakEklenebilir(yer)} durakDegistir={durakDegistir} detayiAc={detayiAc} />))}
     </>}
   </MapContainer>
 }
