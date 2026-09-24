@@ -39,6 +39,7 @@ class KonumServisiTest {
         when(jdbcClient.sql(anyString())
                 .param(anyString(), any())
                 .param(anyString(), any())
+                .param(anyString(), any())
                 .query(KonumSonucu.class)
                 .list())
                 .thenReturn(List.of(new KonumSonucu("Ankara", "Ankara, Türkiye", 39.9, 32.8)));
@@ -47,13 +48,14 @@ class KonumServisiTest {
 
         assertThat(sonuclar).hasSize(1);
         assertThat(sonuclar.get(0).ad()).isEqualTo("Ankara");
-        // MockRestServiceServer.verify() would fail if ORS was called because we didn't expect any request
+        // Beklenmeyen bir ORS isteği gelirse MockRestServiceServer hata verir
         sunucu.verify();
     }
 
     @Test
     void kendiVeriBossaOrsCagrilir() {
         when(jdbcClient.sql(anyString())
+                .param(anyString(), any())
                 .param(anyString(), any())
                 .param(anyString(), any())
                 .query(KonumSonucu.class)
@@ -72,10 +74,11 @@ class KonumServisiTest {
         assertThat(sonuclar.get(0).ad()).isEqualTo("Göreme");
         sunucu.verify();
     }
-    
+
     @Test
     void orsHataVerirseBosListeDoner() {
         when(jdbcClient.sql(anyString())
+                .param(anyString(), any())
                 .param(anyString(), any())
                 .param(anyString(), any())
                 .query(KonumSonucu.class)
@@ -90,5 +93,12 @@ class KonumServisiTest {
 
         assertThat(sonuclar).isEmpty();
         sunucu.verify();
+    }
+
+    @Test
+    void sadelestirmeVeritabanindakiUnaccentIleAyniSonucuVerir() {
+        assertThat(KonumServisi.sadelestir("  İSTANBUL ")).isEqualTo("istanbul");
+        assertThat(KonumServisi.sadelestir("Iğdır")).isEqualTo("igdir");
+        assertThat(KonumServisi.sadelestir("Şişli Çağlayan Göreme Ürgüp")).isEqualTo("sisli caglayan goreme urgup");
     }
 }

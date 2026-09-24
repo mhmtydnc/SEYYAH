@@ -17,8 +17,10 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
@@ -45,57 +47,34 @@ public class KonumServisi {
 
     @SuppressWarnings("unchecked")
     public List<KonumSonucu> ara(String q, int size) {
+        String sade = sadelestir(q);
         List<KonumSonucu> dbSonuclar = jdbcClient.sql("""
-                WITH q_yerlesim AS (
-                    SELECT
-                        ad,
-                        CASE
-                            WHEN il IS NOT NULL AND il != ad THEN ad || ', ' || il
-                            WHEN tur = 'city' THEN ad || ' (şehir)'
-                            WHEN tur = 'town' THEN ad || ' (ilçe/kasaba)'
-                            WHEN tur = 'suburb' THEN ad || ' (mahalle)'
-                            WHEN tur = 'village' THEN ad || ' (köy)'
-                            ELSE ad || ' (' || tur || ')'
-                        END AS etiket,
-                        ST_Y(konum::geometry) AS enlem,
-                        ST_X(konum::geometry) AS boylam,
-                        onem,
-                        nufus,
-                        1 AS tip_sirasi,
-                        CASE WHEN lower(f_unaccent(ad)) LIKE lower(f_unaccent(:q)) || '%' THEN 1 ELSE 0 END AS onek_eslesme,
-                        similarity(lower(f_unaccent(ad)), lower(f_unaccent(:q))) AS benzerlik
+                WITH adaylar AS (
+                    SELECT ad,
+                           concat_ws(', ', ad,
+                                     CASE WHEN tur <> 'city' AND ilce IS DISTINCT FROM ad
+                                               AND ilce NOT LIKE il || '%' THEN ilce END,
+                                     CASE WHEN il IS DISTINCT FROM ad THEN il END) AS etiket,
+                           konum, onem, nufus, 1 AS tip_sirasi,
+                           lower(f_unaccent(ad)) AS sade_ad
                     FROM yerlesimler
-                    WHERE lower(f_unaccent(ad)) LIKE lower(f_unaccent(:q)) || '%' OR lower(f_unaccent(ad)) % lower(f_unaccent(:q))
-                ),
-                q_gezi AS (
-                    SELECT
-                        ad,
-                        ad || ' (' || kategori || ')' AS etiket,
-                        ST_Y(konum::geometry) AS enlem,
-                        ST_X(konum::geometry) AS boylam,
-                        0 AS onem,
-                        0 AS nufus,
-                        2 AS tip_sirasi,
-                        CASE WHEN lower(f_unaccent(ad)) LIKE lower(f_unaccent(:q)) || '%' THEN 1 ELSE 0 END AS onek_eslesme,
-                        similarity(lower(f_unaccent(ad)), lower(f_unaccent(:q))) AS benzerlik
-                    FROM places
-                    WHERE tur = 'gezi' AND (lower(f_unaccent(ad)) LIKE lower(f_unaccent(:q)) || '%' OR lower(f_unaccent(ad)) % lower(f_unaccent(:q)))
-                )
-                SELECT ad, etiket, enlem, boylam
-                FROM (
-                    SELECT * FROM q_yerlesim
+                    WHERE lower(f_unaccent(ad)) LIKE :onek OR lower(f_unaccent(ad)) % :sade
                     UNION ALL
-                    SELECT * FROM q_gezi
-                ) birlesik
-                ORDER BY
-                    onek_eslesme DESC,
-                    tip_sirasi ASC,
-                    onem DESC,
-                    nufus DESC NULLS LAST,
-                    benzerlik DESC
+                    SELECT ad, ad || ' (' || kategori || ')', konum, 0, NULL, 2,
+                           lower(f_unaccent(ad))
+                    FROM places
+                    WHERE tur = 'gezi'
+                      AND (lower(f_unaccent(ad)) LIKE :onek OR lower(f_unaccent(ad)) % :sade)
+                )
+                SELECT ad, etiket, ST_Y(konum::geometry) AS enlem, ST_X(konum::geometry) AS boylam
+                FROM adaylar
+                ORDER BY (sade_ad LIKE :onek) DESC, tip_sirasi, onem DESC, nufus DESC NULLS LAST,
+                         similarity(sade_ad, :sade) DESC
                 LIMIT :limit
                 """)
-                .param("q", q)
+                .param("sade", sade)
+                // Kullanıcının yazdığı % ve _ LIKE içinde joker olmasın
+                .param("onek", sade.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%")
                 .param("limit", size)
                 .query(KonumSonucu.class)
                 .list();
@@ -161,5 +140,12 @@ public class KonumServisi {
             default -> new RotaServisiException(HttpStatus.BAD_GATEWAY,
                     "Konum servisi hata verdi");
         };
+    }
+
+    // DB tarafındaki lower(f_unaccent(ad)) ile aynı sonucu üretir; sorgu metni Java'da hazırlanınca
+    // LIKE deseni sabit olur ve önek indeksi kullanılabilir. ı ayrışmadığı için elle çevrilir.
+    static String sadelestir(String metin) {
+        String ayrik = Normalizer.normalize(metin.trim(), Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+        return ayrik.replace('ı', 'i').toLowerCase(Locale.ROOT);
     }
 }

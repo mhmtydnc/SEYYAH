@@ -47,3 +47,4 @@ tools/takim/.soguma-*
 tools/takim/raporlar/
 
 .claude/worktrees/
+__pycache__/
