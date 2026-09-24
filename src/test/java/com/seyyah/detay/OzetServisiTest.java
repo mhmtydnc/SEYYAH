@@ -23,11 +23,17 @@ public class OzetServisiTest {
         when(jdbcClient.sql(anyString()).param(anyString()).query(Integer.class).single()).thenReturn(1);
     }
 
+    private OzetServisi createService(RestClient.Builder builder, String key) {
+        GeminiIstemcisi gemini = new GeminiIstemcisi(builder, key, "gemini-flash-lite-latest");
+        VikipediMetni wiki = new VikipediMetni(builder);
+        return new OzetServisi(gemini, wiki, jdbcClient);
+    }
+
     @Test
     void basariliOzet_MarkdownTemizligi() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer mockServer = MockRestServiceServer.bindTo(builder).build();
-        OzetServisi ozetServisi = new OzetServisi(builder, jdbcClient, "test-key", "gemini-flash-lite-latest");
+        OzetServisi ozetServisi = createService(builder, "test-key");
         
         mockServer.expect(MockRestRequestMatchers.requestTo("https://tr.wikipedia.org/api/rest_v1/page/summary/Ankara"))
                 .andRespond(MockRestResponseCreators.withSuccess("{\"extract\":\"Ankara çok güzel bir şehirdir. Ve bayağı uzun bir metindir bu, en azından seksen karakteri geçmesi gerekiyor ki test başarılı olsun ve null dönmesin, aksi halde test patlar.\"}", MediaType.APPLICATION_JSON));
@@ -46,7 +52,7 @@ public class OzetServisiTest {
     void kisaExtract_Null() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer mockServer = MockRestServiceServer.bindTo(builder).build();
-        OzetServisi ozetServisi = new OzetServisi(builder, jdbcClient, "test-key", "gemini-flash-lite-latest");
+        OzetServisi ozetServisi = createService(builder, "test-key");
         
         mockServer.expect(MockRestRequestMatchers.requestTo("https://tr.wikipedia.org/api/rest_v1/page/summary/Ankara"))
                 .andRespond(MockRestResponseCreators.withSuccess("{\"extract\":\"Çok kısa.\"}", MediaType.APPLICATION_JSON));
@@ -59,7 +65,7 @@ public class OzetServisiTest {
     void sunucuHatasi503_Exception() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer mockServer = MockRestServiceServer.bindTo(builder).build();
-        OzetServisi ozetServisi = new OzetServisi(builder, jdbcClient, "test-key", "gemini-flash-lite-latest");
+        OzetServisi ozetServisi = createService(builder, "test-key");
         
         mockServer.expect(MockRestRequestMatchers.requestTo("https://tr.wikipedia.org/api/rest_v1/page/summary/Ankara"))
                 .andRespond(MockRestResponseCreators.withSuccess("{\"extract\":\"Ankara çok güzel bir şehirdir. Ve bayağı uzun bir metindir bu, en azından seksen karakteri geçmesi gerekiyor ki test başarılı olsun ve null dönmesin, aksi halde test patlar.\"}", MediaType.APPLICATION_JSON));
@@ -76,7 +82,7 @@ public class OzetServisiTest {
     void anahtarYok_CagriYok() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer mockServer = MockRestServiceServer.bindTo(builder).build();
-        OzetServisi ozetServisi = new OzetServisi(builder, jdbcClient, "", "gemini-flash-lite-latest");
+        OzetServisi ozetServisi = createService(builder, "");
         OzetDetay detay = ozetServisi.ozetUret(new WikidataDetay("aciklama", "https://tr.wikipedia.org/wiki/Ankara", null));
         assertNull(detay);
         mockServer.verify(); // No requests should be made
@@ -86,7 +92,7 @@ public class OzetServisiTest {
     void turkceKarakterliBaslik_TekKodlanmis() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer mockServer = MockRestServiceServer.bindTo(builder).build();
-        OzetServisi ozetServisi = new OzetServisi(builder, jdbcClient, "test-key", "gemini-flash-lite-latest");
+        OzetServisi ozetServisi = createService(builder, "test-key");
         
         mockServer.expect(MockRestRequestMatchers.requestTo("https://tr.wikipedia.org/api/rest_v1/page/summary/An%C4%B1tkabir"))
                 .andExpect(MockRestRequestMatchers.method(HttpMethod.GET))

@@ -76,7 +76,7 @@ public class GuvenlikAyari {
         };
     }
 
-    private static final String[] KORUMALI_YOLLAR = {"/api/rotalarim/**", "/api/auth/ben"};
+    private static final String[] KORUMALI_YOLLAR = {"/api/rotalarim/**", "/api/auth/ben", "/api/uye/**"};
 
     // Token yalnızca korumalı yollarda okunur. Aksi hâlde süresi dolmuş token'ı tarayıcıda kalan kullanıcı,
     // herkese açık rota ve aramada bile 401 alıyordu (geçersiz Bearer, permitAll'dan önce reddediliyor).
