@@ -3,12 +3,14 @@ package com.seyyah.place;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 // Spring 6.1+ yerleşik yöntem doğrulaması: @Validated olmadan da @Min/@Max/@Pattern çalışır
@@ -51,5 +53,25 @@ class PlaceControllerTest {
     void wktEksikse400Doner() throws Exception {
         mvc.perform(get("/api/places/koridor"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void postGovdesindekiEksikAlanlarVarsayilanAlir() throws Exception {
+        mvc.perform(post("/api/places/koridor")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"wkt\":\"" + WKT + "\",\"tur\":\"destek\"}"))
+                .andExpect(status().isOk());
+
+        verify(placeRepository).koridorda(WKT, "destek", 5000, 40);
+    }
+
+    @Test
+    void postGecersizGovde400Doner() throws Exception {
+        mvc.perform(post("/api/places/koridor")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"wkt\":\"\",\"limit\":500}"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(placeRepository);
     }
 }

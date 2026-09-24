@@ -71,7 +71,7 @@ class RouteControllerTest {
         mvc.perform(get("/api/routes/routeStreet")
                         .param("startLon", "29.0").param("startLat", "41.0")
                         .param("endLon", "32.8").param("endLat", "39.9")
-                        .param("tur", "destek"))
+                        .param("tur", "hepsi"))
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(openRouteService);

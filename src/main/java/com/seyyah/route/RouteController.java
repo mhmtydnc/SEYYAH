@@ -32,7 +32,7 @@ public class RouteController {
             @RequestParam @DecimalMin("-90") @DecimalMax("90") double startLat,
             @RequestParam @DecimalMin("-180") @DecimalMax("180") double endLon,
             @RequestParam @DecimalMin("-90") @DecimalMax("90") double endLat,
-            @RequestParam(defaultValue = "gezi") @Pattern(regexp = "gezi|mola") String tur,
+            @RequestParam(defaultValue = "gezi") @Pattern(regexp = "gezi|mola|destek") String tur,
             @RequestParam(defaultValue = "5000") @Min(100) @Max(20000) int yaricap,
             @RequestParam(defaultValue = "20") @Min(1) @Max(200) int limit) {
 
