@@ -126,9 +126,9 @@ class RotaControllerTest {
     @Test
     void durakliRotaFazlaNoktaSayisi400() throws Exception {
         StringBuilder sb = new StringBuilder("{\"noktalar\":[");
-        for (int i = 0; i < 13; i++) {
+        for (int i = 0; i < 14; i++) {
             sb.append("{\"enlem\":41.0,\"boylam\":29.0}");
-            if (i < 12) sb.append(",");
+            if (i < 13) sb.append(",");
         }
         sb.append("]}");
 

@@ -11,7 +11,7 @@ import java.util.List;
 public record DurakliRotaIstegi(
         @Valid
         @NotNull(message = "Nokta listesi gerekli")
-        @Size(min = 2, max = 12, message = "Nokta sayısı 2 ile 12 arasında olmalıdır")
+        @Size(min = 2, max = 13, message = "Nokta sayısı 2 ile 13 arasında olmalıdır")
         List<Nokta> noktalar
 ) {
     public record Nokta(
