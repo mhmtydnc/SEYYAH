@@ -15,6 +15,29 @@ function ciz(detay: YerDetayiTipi | null) {
 }
 
 describe('Yer detayı koşullu bölümleri', () => {
+  it('özet varken eski açıklamayı gizler', () => {
+    const html = ciz({ ...yer, ozet: { metin: 'Yeni özet metni', vikipedi: 'https://tr.wikipedia.org/wiki/Kale' },
+      wikidata: { aciklama: 'Eski açıklama', vikipedi: null, gorsel: null }, google: null })
+    expect(html).toContain('Yeni özet metni')
+    expect(html).toContain('Yapay zekâ ile Vikipedi&#x27;den özetlendi')
+    expect(html).not.toContain('Eski açıklama')
+  })
+
+  it('yorum yokken yorum bölümünü göstermez', () => {
+    const html = ciz({ ...yer, wikidata: null, google: { puan: 4.5, yorumSayisi: 12, haritaBaglantisi: null, yorumlar: [] } })
+    expect(html).not.toContain('Google yorumları')
+  })
+
+  it('en fazla üç yorumu düz metin ve güvenli bağlantılarla gösterir', () => {
+    const yorum = { yazar: '<Ayşe>', yazarBaglantisi: 'javascript:alert(1)', puan: 5, metin: '<b>Güzel</b>', zaman: '2 ay önce' }
+    const html = ciz({ ...yer, wikidata: null, google: { puan: 5, yorumSayisi: 4, haritaBaglantisi: null,
+      yorumlar: [yorum, yorum, yorum, { ...yorum, metin: 'Dördüncü' }] } })
+    expect(html).toContain('&lt;b&gt;Güzel&lt;/b&gt;')
+    expect(html).not.toContain('javascript:')
+    expect(html).not.toContain('Dördüncü')
+    expect(html.match(/yer-detay-yorum-ust/g)).toHaveLength(3)
+  })
+
   it('wikidata ve google boşken bilinen alanları gösterir', () => {
     const html = ciz({ ...yer, wikidata: null, google: null })
     expect(html).toContain('Kırşehir Kalesi')

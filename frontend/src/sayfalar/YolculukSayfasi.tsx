@@ -5,6 +5,7 @@ import { kategoriAdi } from '../api/kategoriler'
 import type { SiraliNokta } from '../rota/duraklar'
 import { gitBaglantisi, tumRotaBaglantisi } from '../rota/haritaBaglantilari'
 import { saatMetni } from '../rota/zamanCizelgesi'
+import { uyariMetni } from '../rota/acilisSaati'
 
 interface YolculukPlani {
   noktalar: SiraliNokta[]
@@ -62,14 +63,20 @@ export function YolculukSayfasi() {
     yonlendir('/')
   }
 
-  function varisSaati(sira: number): string {
-    if (!plan) return ''
+  function varisZamani(sira: number): Date {
+    if (!plan) return new Date(NaN)
     let zaman = new Date(plan.baslangic).getTime()
     for (let konumSirasi = plan.sira; konumSirasi <= sira; konumSirasi++) {
       zaman += (plan.bacaklar[konumSirasi]?.sureSn ?? 0) * 1000
       if (konumSirasi < sira) zaman += (plan.noktalar[konumSirasi]?.durak?.kalisDakika ?? 0) * 60000
     }
-    return saatMetni(new Date(zaman))
+    return new Date(zaman)
+  }
+
+  function durakUyarisi(sira: number): string | null {
+    if (!plan) return null
+    const durak = plan.noktalar[sira]?.durak
+    return durak ? uyariMetni(durak.yer.calismaSaatleri, varisZamani(sira), durak.kalisDakika) : null
   }
 
   if (!plan) return <main className="yolculuk-sayfasi"><h1>Aktif yolculuk yok</h1><button className="birincil" onClick={() => yonlendir('/')}>Ana sayfaya dön</button></main>
@@ -81,15 +88,17 @@ export function YolculukSayfasi() {
       <p>{mesafe !== null && mesafe <= 300 ? 'Yaklaştın' : 'Sıradaki durak'}</p>
       <h2>{siradaki.ad}</h2>
       <span>{siradaki.durak ? kategoriAdi(siradaki.durak.yer.kategori) : 'Varış noktası'}</span>
-      <div className="yolculuk-bilgileri"><span>Tahmini varış <strong>{varisSaati(plan.sira)}</strong></span>
+      <div className="yolculuk-bilgileri"><span>Tahmini varış <strong>{saatMetni(varisZamani(plan.sira))}</strong></span>
         <span>Kalış <strong>{siradaki.durak?.kalisDakika ?? 0} dk</strong></span></div>
+      {durakUyarisi(plan.sira) && <p className="acilis-uyarisi">{durakUyarisi(plan.sira)}</p>}
       {mesafe !== null && <p>{mesafe < 1000 ? `${Math.round(mesafe)} m` : `${(mesafe / 1000).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} km`} kuş uçuşu</p>}
       <a className="birincil" href={gitBaglantisi(siradaki, navigator.userAgent)} target="_blank" rel="noopener noreferrer">Git ↗</a>
       <div className="yolculuk-eylemler"><button type="button" onClick={() => ilerle(true)}>Vardım</button>
         <button type="button" onClick={() => ilerle(false)}>Bu durağı atla</button></div>
     </section>
     <section className="kalan-duraklar"><h2>Kalan duraklar</h2><ol start={plan.sira + 2}>{plan.noktalar.slice(plan.sira + 1).map((nokta, sira) =>
-      <li key={`${nokta.ad}-${sira}`}><strong>{nokta.ad}</strong><span>{varisSaati(plan.sira + sira + 1)}</span></li>)}</ol></section>
+      <li key={`${nokta.ad}-${sira}`}><strong>{nokta.ad}</strong><span>{saatMetni(varisZamani(plan.sira + sira + 1))}</span>
+        {durakUyarisi(plan.sira + sira + 1) && <small className="acilis-uyarisi">{durakUyarisi(plan.sira + sira + 1)}</small>}</li>)}</ol></section>
     <a className="tum-rota-baglantisi" href={tumRotaBaglantisi(plan.noktalar.slice(plan.sira).filter((nokta) => nokta.durak), plan.varis)} target="_blank" rel="noopener noreferrer">Tüm rotayı haritada aç ↗</a>
     <button className="bitir-dugmesi" type="button" onClick={bitir}>Yolculuğu bitir</button>
   </main>

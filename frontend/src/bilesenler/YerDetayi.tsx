@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '../api/istemci'
 import { guvenliSite } from '../api/baglanti'
 import { kategoriAdi } from '../api/kategoriler'
@@ -19,6 +19,31 @@ function ilkHarfBuyuk(metin: string) {
   return metin.charAt(0).toLocaleUpperCase('tr-TR') + metin.slice(1)
 }
 
+function YorumKarti({ yorum }: { yorum: NonNullable<NonNullable<YerDetayiTipi['google']>['yorumlar']>[number] }) {
+  const [acik, acikAyarla] = useState(false)
+  const [uzun, uzunAyarla] = useState(false)
+  const metinAlani = useRef<HTMLParagraphElement>(null)
+  const yazarBaglantisi = guvenliSite(yorum.yazarBaglantisi)
+  useEffect(() => {
+    const alan = metinAlani.current
+    if (!alan) return
+    const olc = () => uzunAyarla(alan.scrollHeight > alan.clientHeight + 1)
+    olc()
+    const gozlemci = new ResizeObserver(olc)
+    gozlemci.observe(alan)
+    return () => gozlemci.disconnect()
+  }, [yorum.metin])
+  return <article className="yer-detay-yorum">
+    <div className="yer-detay-yorum-ust">
+      <strong>{yazarBaglantisi ? <a href={yazarBaglantisi} target="_blank" rel="noopener noreferrer">{yorum.yazar}</a> : yorum.yazar}</strong>
+      <small>{yorum.zaman}</small>
+    </div>
+    <span className="yer-detay-yildiz" aria-label={`${yorum.puan} yıldız`}>{'★'.repeat(Math.max(0, Math.min(5, Math.round(yorum.puan))))}</span>
+    <p ref={metinAlani} className={acik ? '' : 'yer-detay-yorum-kisa'}>{yorum.metin}</p>
+    {(uzun || acik) && <button type="button" className="yer-detay-devami" onClick={() => acikAyarla(!acik)}>{acik ? 'Daha az' : 'Devamı'}</button>}
+  </article>
+}
+
 export function YerDetayiIcerigi({ yer, detay, hata, durakMi, eklenebilir, durakDegistir }: {
   yer: KoridorYeri; detay: YerDetayiTipi | null; hata: boolean; durakMi: boolean
   eklenebilir: boolean; durakDegistir: () => void
@@ -30,6 +55,7 @@ export function YerDetayiIcerigi({ yer, detay, hata, durakMi, eklenebilir, durak
   const gorselUrl = guvenliSite(gorsel?.url)
   const gorselSayfasi = guvenliSite(gorsel?.sayfa)
   const haritaBaglantisi = guvenliSite(google?.haritaBaglantisi)
+  const ozetBaglantisi = guvenliSite(detay?.ozet?.vikipedi)
   return <div className="yer-detay-icerigi">
     {hata && <p className="yer-detay-hata" role="alert">Yer detayı alınamadı. Bilinen bilgiler gösteriliyor.</p>}
     {gorsel && gorselUrl && <figure className="yer-detay-gorsel">
@@ -47,7 +73,14 @@ export function YerDetayiIcerigi({ yer, detay, hata, durakMi, eklenebilir, durak
       <strong>Google</strong>
       {haritaBaglantisi && <a href={haritaBaglantisi} target="_blank" rel="noopener noreferrer">Google Haritalar'da gör ↗</a>}
     </div>}
-    {detay?.wikidata?.aciklama && <p className="yer-detay-aciklama">{ilkHarfBuyuk(detay.wikidata.aciklama)}</p>}
+    {!!google?.yorumlar?.length && <section className="yer-detay-yorumlar" aria-label="Google yorumları">
+      <h3>Google yorumları</h3>
+      {google.yorumlar.slice(0, 3).map((yorum, sira) => <YorumKarti key={`${yorum.yazar}-${sira}`} yorum={yorum} />)}
+    </section>}
+    {detay?.ozet ? <div className="yer-detay-aciklama">
+      <p>{detay.ozet.metin}</p>
+      <small>Yapay zekâ ile Vikipedi'den özetlendi{ozetBaglantisi && <> · <a href={ozetBaglantisi} target="_blank" rel="noopener noreferrer">Vikipedi</a></>}</small>
+    </div> : detay?.wikidata?.aciklama && <p className="yer-detay-aciklama">{ilkHarfBuyuk(detay.wikidata.aciklama)}</p>}
     {(detay?.calismaSaatleri ?? yer.calismaSaatleri) && <p><strong>Çalışma saatleri:</strong> {detay?.calismaSaatleri ?? yer.calismaSaatleri}</p>}
     {(detay?.ucret ?? yer.ucret) != null && <p><strong>Ücret:</strong> {detay?.ucret ?? yer.ucret}</p>}
     {site && <a href={site} target="_blank" rel="noopener noreferrer">Web sitesi ↗</a>}
