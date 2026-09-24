@@ -15,4 +15,9 @@ public class ApiHataYakalayici extends ResponseEntityExceptionHandler {
     public ProblemDetail rotaServisi(RotaServisiException e) {
         return ProblemDetail.forStatusAndDetail(e.getStatus(), e.getMessage());
     }
+
+    @ExceptionHandler(ApiIstisnasi.class)
+    public ProblemDetail apiIstisnasi(ApiIstisnasi e) {
+        return ProblemDetail.forStatusAndDetail(e.getStatus(), e.getMessage());
+    }
 }

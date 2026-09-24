@@ -1,9 +1,12 @@
 package com.seyyah.place;
 
+import com.seyyah.guvenlik.GuvenlikAyari;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -14,7 +17,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 // Spring 6.1+ yerleşik yöntem doğrulaması: @Validated olmadan da @Min/@Max/@Pattern çalışır
+// Güvenlik classpath'e girdiği için GuvenlikAyari import edilir; uç herkese açık kaldığından
+// testler token göndermez, sadece bağlamın açılabilmesi için jwt.gizli test değeri gerekir.
 @WebMvcTest(PlaceController.class)
+@Import(GuvenlikAyari.class)
+@TestPropertySource(properties = "jwt.gizli=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd")
 class PlaceControllerTest {
 
     private static final String WKT = "SRID=4326;LINESTRING(29 41, 32 39)";

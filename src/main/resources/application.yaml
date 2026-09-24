@@ -33,6 +33,9 @@ ors:
     url: https://api.openrouteservice.org
     key: ${ORS_API_KEY}
 
+jwt:
+  gizli: ${JWT_SECRET}
+
 server:
   port: 9090
 

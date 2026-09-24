@@ -1,10 +1,13 @@
 package com.seyyah.route;
 
+import com.seyyah.guvenlik.GuvenlikAyari;
 import com.seyyah.place.PlaceRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -17,7 +20,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+// Güvenlik classpath'e girdiği için GuvenlikAyari import edilir; bu uç herkese açık kaldığından
+// testler token göndermez, sadece bağlamın açılabilmesi için jwt.gizli test değeri gerekir.
 @WebMvcTest(RouteController.class)
+@Import(GuvenlikAyari.class)
+@TestPropertySource(properties = "jwt.gizli=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd")
 class RouteControllerTest {
 
     @Autowired
