@@ -35,9 +35,10 @@ public class HttpYonlendirmeYapilandirmasi {
     @Bean
     public FilterRegistrationBean<AcmeVeYonlendirmeFiltresi> acmeVeYonlendirmeFiltresi(
             @Value("${seyyah.http-yonlendirme.port}") int httpPortu,
-            @Value("${seyyah.acme-dizini}") String acmeDizini) {
+            @Value("${seyyah.acme-dizini}") String acmeDizini,
+            @Value("${seyyah.alan-adi}") String alanAdi) {
         FilterRegistrationBean<AcmeVeYonlendirmeFiltresi> kayit =
-                new FilterRegistrationBean<>(new AcmeVeYonlendirmeFiltresi(httpPortu, acmeDizini));
+                new FilterRegistrationBean<>(new AcmeVeYonlendirmeFiltresi(httpPortu, acmeDizini, alanAdi));
         kayit.setOrder(Ordered.HIGHEST_PRECEDENCE);
         kayit.addUrlPatterns("/*");
         return kayit;

@@ -26,10 +26,12 @@ class AcmeVeYonlendirmeFiltresi extends OncePerRequestFilter {
 
     private final int httpPortu;
     private final Path acmeDizini;
+    private final String alanAdi;
 
-    AcmeVeYonlendirmeFiltresi(int httpPortu, String acmeDizini) {
+    AcmeVeYonlendirmeFiltresi(int httpPortu, String acmeDizini, String alanAdi) {
         this.httpPortu = httpPortu;
         this.acmeDizini = Path.of(acmeDizini);
+        this.alanAdi = alanAdi;
     }
 
     @Override
@@ -48,7 +50,8 @@ class AcmeVeYonlendirmeFiltresi extends OncePerRequestFilter {
         }
 
         String sorgu = istek.getQueryString();
-        String hedef = "https://" + istek.getServerName() + yol + (sorgu == null ? "" : "?" + sorgu);
+        // Host başlığı istemciden gelir; yönlendirme hedefi ona değil yapılandırmaya dayanmalı
+        String hedef = "https://" + alanAdi + yol + (sorgu == null ? "" : "?" + sorgu);
         yanit.setStatus(HttpStatus.MOVED_PERMANENTLY.value());
         yanit.setHeader("Location", hedef);
     }
