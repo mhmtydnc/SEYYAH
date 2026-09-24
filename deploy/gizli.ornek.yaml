@@ -1,0 +1,6 @@
+# VM'de C:\seyyah\gizli.yaml olarak kopyalayip degerleri doldurun.
+DB_URL: "" # PostgreSQL JDBC adresi; .../seyyah_prod?sslmode=require
+DB_USER: "" # Veritabani kullanicisi
+DB_PASS: "" # Veritabani sifresi
+ORS_API_KEY: "" # OpenRouteService API anahtari
+JWT_SECRET: "" # En az 32 bayt. PowerShell: [byte[]]$bayt=New-Object byte[] 32; $uretic=[Security.Cryptography.RandomNumberGenerator]::Create(); $uretic.GetBytes($bayt); [Convert]::ToBase64String($bayt)

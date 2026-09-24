@@ -40,6 +40,7 @@ veri/
 
 .env
 application-local.yaml
+src/main/resources/static/
 ### Ajan takımı ###
 tools/takim/kullanim.log
 tools/takim/.soguma-*
