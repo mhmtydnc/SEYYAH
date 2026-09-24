@@ -1,0 +1,57 @@
+name: Deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+concurrency:
+  group: seyyah-production
+  cancel-in-progress: false
+jobs:
+  dagit:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Arayuzu derle
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+      - name: Jar olustur
+        run: |
+          mkdir -p src/main/resources/static
+          cp -R frontend/dist/. src/main/resources/static/
+          chmod +x mvnw
+          # Testler burada da koşar: CI ayrı workflow, kırmızı commit canlıya çıkmasın
+          ./mvnw package
+      - name: SSH anahtarini yukle
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.VM_SSH_KEY }}
+      - name: Sunucu anahtarini kaydet
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts
+          test -s ~/.ssh/known_hosts
+      - name: VM'ye dagit
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+        run: |
+          scp target/seyyah-0.0.1-SNAPSHOT.jar "$VM_USER@$VM_HOST:C:/seyyah/staging/seyyah.jar"
+          # deploy.ps1 değişmişse VM'deki kopya da güncellensin
+          scp deploy/deploy.ps1 "$VM_USER@$VM_HOST:C:/seyyah/deploy.ps1"
+          ssh "$VM_USER@$VM_HOST" 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:\seyyah\deploy.ps1'
