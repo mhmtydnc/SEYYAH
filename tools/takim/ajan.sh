@@ -10,7 +10,7 @@ set -uo pipefail
 AJAN=${1:?ajan: codex|gemini}
 KADEME=${2:?kademe: hafif|orta|agir}
 GOREV=${3:?gorev adi}
-ISTEM=${4:?istem dosyasi}
+ISTEM=$(realpath "${4:?istem dosyasi}") || exit 2
 
 KOK=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
 TAKIM="$KOK/tools/takim"
@@ -57,7 +57,8 @@ case "$AJAN" in
   codex)
     # --ignore-user-config: masaüstü uygulamasının eklenti/MCP yükü her çağrıda token yemesin
     codex exec -m "$MODEL" -c model_reasoning_effort="$EFOR" \
-      --ignore-user-config -c sandbox_workspace_write.network_access=true \
+      --ignore-user-config -c 'windows.sandbox="elevated"' \
+      -c sandbox_workspace_write.network_access=true \
       --sandbox workspace-write -C "$WT" -o "$RAPOR" - < "$ISTEM" >"$CIKTI" 2>&1
     KOD=$? ;;
   gemini)
