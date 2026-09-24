@@ -1,4 +1,4 @@
-import type { KimlikYaniti, KonumOnerisi, Kullanici, KayitliRota, RotaKaydi, RotaYaniti, Konum } from './tipler'
+import type { KimlikYaniti, KonumOnerisi, Kullanici, KayitliRota, RotaKaydi, RotaYaniti, Konum, DurakliRota, RotaNoktasi } from './tipler'
 
 export const TOKEN_ANAHTARI = 'seyyah-token'
 
@@ -46,6 +46,8 @@ export const api = {
       varisEnlem: String(varis.enlem), varisBoylam: String(varis.boylam),
       yaricap: String(yaricap), limit: '20',
     })}`),
+  durakliRotaOlustur: (noktalar: RotaNoktasi[], sinyal?: AbortSignal) =>
+    istek<DurakliRota>('/api/rota/duraklu', { method: 'POST', body: JSON.stringify({ noktalar }), signal: sinyal }),
   giris: (eposta: string, sifre: string) =>
     istek<KimlikYaniti>('/api/auth/giris', { method: 'POST', body: JSON.stringify({ eposta, sifre }) }),
   kayit: (ad: string, eposta: string, sifre: string) =>
