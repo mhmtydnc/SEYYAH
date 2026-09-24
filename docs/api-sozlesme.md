@@ -41,7 +41,7 @@ ORS `/geocode/autocomplete` üzerinden, Türkiye ile sınırlı (`boundary.count
 ```json
 { "id": 1, "ad": "Anıtkabir", "kategori": "museum", "tur": "gezi", "enlem": 39.92, "boylam": 32.83,
   "yolaUzaklikM": 850, "yolOrani": 0.97, "ucret": null, "calismaSaatleri": "Mo-Su 09:00-17:00",
-  "wikidataId": "Q2394", "website": null }
+  "wikidataId": "Q615404", "website": null }
 ```
 Hatalar: 400 geçersiz parametre, 404 rota bulunamadı, 503 kota doldu, 502/504 rota servisi sorunu.
 
