@@ -14,13 +14,21 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+// Tüm bağlam açılır: jwt.gizli ve ors.api.key bağlamın kurulması için gerekli (gerçek değer değil); eksikken
+// bağlam açılamıyor ve kapanırken paylaşılan konteyneri de durdurup diğer DB testlerini düşürüyordu
 @SpringBootTest
 @ActiveProfiles("test")
+@TestPropertySource(properties = {
+        "jwt.gizli=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd",
+        "ors.api.key=test-anahtar",
+        "gemini.anahtar=test-anahtar"
+})
 public class SoruServisiPostgisTest extends PostgisTestDestegi {
 
     @Autowired

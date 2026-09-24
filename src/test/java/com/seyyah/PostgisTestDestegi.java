@@ -1,9 +1,8 @@
 package com.seyyah;
 
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -12,26 +11,28 @@ import org.testcontainers.utility.DockerImageName;
  * DB gerektiren tüm testler bu sınıftan türetilir. Docker yoksa (yerel geliştirme) testler atlanır,
  * CI'da (GitHub Actions ubuntu runner, Docker kurulu) normal çalışır.
  *
- * Konteyner JUnit'in @Container'ı ile değil Spring bean'i olarak yönetilir: @Container onu her test
- * sınıfının sonunda durdurur, ama önbellekteki Spring bağlamı sonraki sınıfta kapanmış porta bağlanmaya
- * çalışır. Bean olarak, önbellekteki bağlam yaşadıkça konteyner de açık kalır; tek örnek tüm bağlamlarca
- * paylaşılır, start() zaten çalışan konteynerde bir şey yapmaz.
+ * Konteyner JVM başına bir kez başlatılır ve Spring'e yalnızca bağlantı bilgisi verilir; yaşam döngüsü Spring'e
+ * bağlı değildir. Önceki iki çözüm de kırılgandı: @Container onu her test sınıfının sonunda durduruyordu, bean
+ * olarak yönetilince ise bağlamı açılamayan tek bir test kapanırken paylaşılan konteyneri durdurup diğer tüm DB
+ * testlerini zaman aşımına düşürdü. Konteyneri JVM sonunda Testcontainers (Ryuk) temizler.
  */
 @Testcontainers(disabledWithoutDocker = true)
-@Import(PostgisTestDestegi.Konteyner.class)
 public abstract class PostgisTestDestegi {
 
-    @TestConfiguration(proxyBeanMethods = false)
-    static class Konteyner {
+    static final PostgreSQLContainer<?> POSTGIS = new PostgreSQLContainer<>(
+            DockerImageName.parse("postgis/postgis:18-3.6").asCompatibleSubstituteFor("postgres"));
 
-        private static final PostgreSQLContainer<?> POSTGIS = new PostgreSQLContainer<>(
-                DockerImageName.parse("postgis/postgis:18-3.6").asCompatibleSubstituteFor("postgres"));
-
-        // destroyMethod boş: bir bağlam kapanırken paylaşılan konteyneri durdurmasın (JVM sonunda Ryuk temizler)
-        @Bean(destroyMethod = "")
-        @ServiceConnection
-        PostgreSQLContainer<?> postgis() {
-            return POSTGIS;
+    static {
+        // Sınıf Docker'sız ortamda da yüklenir (JUnit sonra atlar); orada başlatmaya çalışma
+        if (DockerClientFactory.instance().isDockerAvailable()) {
+            POSTGIS.start();
         }
+    }
+
+    @DynamicPropertySource
+    static void veritabani(DynamicPropertyRegistry kayit) {
+        kayit.add("spring.datasource.url", POSTGIS::getJdbcUrl);
+        kayit.add("spring.datasource.username", POSTGIS::getUsername);
+        kayit.add("spring.datasource.password", POSTGIS::getPassword);
     }
 }
