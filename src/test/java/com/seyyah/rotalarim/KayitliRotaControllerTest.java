@@ -13,12 +13,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Optional;
 
+import java.nio.charset.StandardCharsets;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -124,5 +127,13 @@ class KayitliRotaControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(govde))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void gecersizTokenlaKorumaliYol401VeUtf8Mesaj() throws Exception {
+        mvc.perform(get("/api/rotalarim").header("Authorization", "Bearer gecersiz.belirtec.degeri"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().encoding(StandardCharsets.UTF_8))
+                .andExpect(jsonPath("$.detail").value("Giriş gerekli veya oturum belirteci geçersiz"));
     }
 }

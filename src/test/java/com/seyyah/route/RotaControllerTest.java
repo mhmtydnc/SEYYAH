@@ -145,4 +145,17 @@ class RotaControllerTest {
                         .content("{}"))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void gecersizTokenHerkeseAcikRotayiEngellemez() throws Exception {
+        // Süresi dolmuş token'ı tarayıcıda kalan kullanıcı rota oluşturabilmeli
+        RotaSonucu ana = new RotaSonucu("wkt", List.of(List.of(29.0, 41.0), List.of(32.0, 39.0)), 1000.0, 500.0);
+        given(openRouteService.getRoute(29.0, 41.0, 32.0, 39.0)).willReturn(ana);
+        given(alternatifRotaServisi.alternatifleriBul(eq(ana), anyDouble(), anyDouble(), anyDouble(), anyDouble()))
+                .willReturn(List.of());
+
+        mvc.perform(get("/api/rota?kalkisEnlem=41.0&kalkisBoylam=29.0&varisEnlem=39.0&varisBoylam=32.0")
+                        .header("Authorization", "Bearer gecersiz.belirtec.degeri"))
+                .andExpect(status().isOk());
+    }
 }
