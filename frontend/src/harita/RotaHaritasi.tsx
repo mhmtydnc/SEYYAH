@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { CircleMarker, MapContainer, Popup, Polyline, TileLayer, useMap } from 'react-leaflet'
 import { latLngBounds, type CircleMarker as LeafletDaire, type LatLngTuple } from 'leaflet'
-import type { Konum, KoridorYeri, RotaYaniti, YerTuru } from '../api/tipler'
+import type { Konum, KoridorYeri, Rota, RotaYaniti, YerTuru } from '../api/tipler'
 import { kategoriAdi } from '../api/kategoriler'
 import { leafletKoordinatlari } from './koordinat'
 
@@ -13,7 +13,7 @@ function HaritaOdak({ rota, kalkis, varis, seciliYer }: {
   const harita = useMap()
   useEffect(() => {
     if (!rota || !kalkis || !varis) return
-    const noktalar: LatLngTuple[] = [...leafletKoordinatlari(rota.geometri),
+    const noktalar: LatLngTuple[] = [...rota.rotalar.flatMap((secenek) => leafletKoordinatlari(secenek.geometri)),
       [kalkis.enlem, kalkis.boylam], [varis.enlem, varis.boylam]]
     harita.fitBounds(latLngBounds(noktalar), { padding: [34, 34] })
   }, [harita, rota, kalkis, varis])
@@ -32,8 +32,9 @@ function YerIsareti({ yer, secili }: { yer: KoridorYeri; secili: boolean }) {
   </CircleMarker>
 }
 
-export function RotaHaritasi({ rota, kalkis, varis, seciliYer }: {
-  rota: RotaYaniti | null; kalkis: Konum | null; varis: Konum | null; seciliYer: KoridorYeri | null
+export function RotaHaritasi({ rota, seciliRota, rotaSec, kalkis, varis, seciliYer }: {
+  rota: RotaYaniti | null; seciliRota: Rota | null; rotaSec: (sira: number) => void;
+  kalkis: Konum | null; varis: Konum | null; seciliYer: KoridorYeri | null
 }) {
   return <MapContainer center={[39, 35]} zoom={6} scrollWheelZoom className="harita" aria-label="Rota haritası">
     <div className="harita-lejandi" aria-label="Harita açıklaması">
@@ -45,12 +46,17 @@ export function RotaHaritasi({ rota, kalkis, varis, seciliYer }: {
       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> katkıda bulunanlar' />
     <HaritaOdak rota={rota} kalkis={kalkis} varis={varis} seciliYer={seciliYer} />
     {rota && <>
-      <Polyline positions={leafletKoordinatlari(rota.geometri)} pathOptions={{ color: '#204f6b', weight: 5 }} />
+      {rota.rotalar.filter((secenek) => secenek.sira !== seciliRota?.sira).map((secenek) =>
+        <Polyline key={secenek.sira} positions={leafletKoordinatlari(secenek.geometri)}
+          pathOptions={{ color: '#8d969c', weight: 4, opacity: 0.85 }}
+          eventHandlers={{ click: () => rotaSec(secenek.sira) }} />)}
+      {seciliRota && <Polyline key={seciliRota.sira} positions={leafletKoordinatlari(seciliRota.geometri)}
+        pathOptions={{ color: '#204f6b', weight: 7, opacity: 1 }} />}
       {kalkis && <CircleMarker center={[kalkis.enlem, kalkis.boylam]} radius={9}
         pathOptions={{ color: '#fff', weight: 2, fillColor: '#204f6b', fillOpacity: 1 }}><Popup>Kalkış: {kalkis.ad}</Popup></CircleMarker>}
       {varis && <CircleMarker center={[varis.enlem, varis.boylam]} radius={9}
         pathOptions={{ color: '#fff', weight: 2, fillColor: '#242c38', fillOpacity: 1 }}><Popup>Varış: {varis.ad}</Popup></CircleMarker>}
-      {(['gezi', 'mola', 'destek'] as YerTuru[]).flatMap((tur) => rota.yerler[tur].map((yer) =>
+      {(['gezi', 'mola', 'destek'] as YerTuru[]).flatMap((tur) => (seciliRota?.yerler[tur] ?? []).map((yer) =>
         <YerIsareti key={`${tur}-${yer.id}`} yer={yer} secili={seciliYer?.id === yer.id && seciliYer?.tur === tur} />))}
     </>}
   </MapContainer>

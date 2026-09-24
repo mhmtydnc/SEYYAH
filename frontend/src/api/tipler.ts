@@ -25,11 +25,18 @@ export interface KoridorYeri {
   website: string | null
 }
 
-export interface RotaYaniti {
+export interface Rota {
+  sira: number
+  ad: string
+  uzerinden: string | null
   mesafeM: number
   sureSn: number
   geometri: [number, number][]
   yerler: Record<YerTuru, KoridorYeri[]>
+}
+
+export interface RotaYaniti {
+  rotalar: Rota[]
 }
 
 export interface Kullanici {
