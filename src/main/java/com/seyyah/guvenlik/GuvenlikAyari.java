@@ -19,10 +19,16 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
 
 // Üyelik ve kayıtlı rotalar için gereken tüm güvenlik bean'leri burada toplanır;
 // @WebMvcTest dilimleri bu sınıfı import ederek aynı yapılandırmayı kullanabilir.
@@ -64,8 +70,22 @@ public class GuvenlikAyari {
                     HttpStatus.UNAUTHORIZED, "Giriş gerekli veya oturum belirteci geçersiz");
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
             response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+            // Belirtilmezse ISO-8859-1 yazılır ve Türkçe karakterler bozulur
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             response.getWriter().write(mapper.writeValueAsString(govde));
         };
+    }
+
+    private static final String[] KORUMALI_YOLLAR = {"/api/rotalarim/**", "/api/auth/ben"};
+
+    // Token yalnızca korumalı yollarda okunur. Aksi hâlde süresi dolmuş token'ı tarayıcıda kalan kullanıcı,
+    // herkese açık rota ve aramada bile 401 alıyordu (geçersiz Bearer, permitAll'dan önce reddediliyor).
+    private static BearerTokenResolver korumaliYollardaTokenCozucu() {
+        DefaultBearerTokenResolver varsayilan = new DefaultBearerTokenResolver();
+        List<RequestMatcher> korumali = Arrays.stream(KORUMALI_YOLLAR)
+                .map(yol -> (RequestMatcher) PathPatternRequestMatcher.withDefaults().matcher(yol))
+                .toList();
+        return istek -> korumali.stream().anyMatch(m -> m.matches(istek)) ? varsayilan.resolve(istek) : null;
     }
 
     @Bean
@@ -77,10 +97,11 @@ public class GuvenlikAyari {
                 .httpBasic(temel -> temel.disable())
                 .formLogin(form -> form.disable())
                 .authorizeHttpRequests(istek -> istek
-                        .requestMatchers("/api/rotalarim/**", "/api/auth/ben").authenticated()
+                        .requestMatchers(KORUMALI_YOLLAR).authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(hata -> hata.authenticationEntryPoint(girisNoktasi))
                 .oauth2ResourceServer(oauth2 -> oauth2
+                        .bearerTokenResolver(korumaliYollardaTokenCozucu())
                         .jwt(jwt -> jwt.decoder(jwtDecoder))
                         .authenticationEntryPoint(girisNoktasi));
 

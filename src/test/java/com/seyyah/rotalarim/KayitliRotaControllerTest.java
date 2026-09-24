@@ -13,12 +13,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Optional;
 
+import java.nio.charset.StandardCharsets;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -85,5 +88,52 @@ class KayitliRotaControllerTest {
 
         mvc.perform(delete("/api/rotalarim/5").with(jwt().jwt(builder -> builder.subject("1"))))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void kaydetDurakli() throws Exception {
+        when(repo.save(any(KayitliRota.class))).thenAnswer(cagri -> {
+            KayitliRota rota = cagri.getArgument(0);
+            rota.setId(8L);
+            return rota;
+        });
+
+        String govdeDurakli = "{\"baslik\":\"İstanbul - Kapadokya\","
+                + "\"kalkis\":{\"ad\":\"İstanbul\",\"enlem\":41.01,\"boylam\":28.97},"
+                + "\"varis\":{\"ad\":\"Göreme\",\"enlem\":38.64,\"boylam\":34.83},"
+                + "\"uzerinden\":{\"ad\":\"Aksaray\",\"enlem\":38.37,\"boylam\":34.03},"
+                + "\"duraklar\":[{\"id\":118,\"ad\":\"Kırşehir Kalesi\",\"kategori\":\"castle\",\"enlem\":39.14,\"boylam\":34.16}]}";
+
+        mvc.perform(post("/api/rotalarim")
+                        .with(jwt().jwt(builder -> builder.subject("1")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(govdeDurakli))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(8))
+                .andExpect(jsonPath("$.uzerinden.ad").value("Aksaray"))
+                .andExpect(jsonPath("$.duraklar[0].id").value(118));
+    }
+
+    @Test
+    void durakAdiCokUzunsa400() throws Exception {
+        String uzunAd = "a".repeat(201);
+        String govde = "{\"baslik\":\"Deneme\","
+                + "\"kalkis\":{\"ad\":\"A\",\"enlem\":41.0,\"boylam\":29.0},"
+                + "\"varis\":{\"ad\":\"B\",\"enlem\":39.9,\"boylam\":32.8},"
+                + "\"duraklar\":[{\"id\":1,\"ad\":\"" + uzunAd + "\",\"kategori\":\"castle\",\"enlem\":40.0,\"boylam\":30.0}]}";
+
+        mvc.perform(post("/api/rotalarim")
+                        .with(jwt().jwt(builder -> builder.subject("1")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(govde))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void gecersizTokenlaKorumaliYol401VeUtf8Mesaj() throws Exception {
+        mvc.perform(get("/api/rotalarim").header("Authorization", "Bearer gecersiz.belirtec.degeri"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().encoding(StandardCharsets.UTF_8))
+                .andExpect(jsonPath("$.detail").value("Giriş gerekli veya oturum belirteci geçersiz"));
     }
 }

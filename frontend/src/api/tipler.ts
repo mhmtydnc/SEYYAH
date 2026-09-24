@@ -29,11 +29,32 @@ export interface Rota {
   sira: number
   ad: string
   uzerinden: string | null
+  araNokta: Konum | null
   mesafeM: number
   sureSn: number
   geometri: [number, number][]
   yerler: Record<YerTuru, KoridorYeri[]>
 }
+
+export interface RotaNoktasi {
+  enlem: number
+  boylam: number
+  durakId?: number
+}
+
+export interface RotaBacagi {
+  mesafeM: number
+  sureSn: number
+}
+
+export interface DurakliRota {
+  mesafeM: number
+  sureSn: number
+  geometri: [number, number][]
+  bacaklar: RotaBacagi[]
+}
+
+export interface KayitliDurak extends Pick<KoridorYeri, 'id' | 'ad' | 'kategori' | 'enlem' | 'boylam'> {}
 
 export interface RotaYaniti {
   rotalar: Rota[]
@@ -55,7 +76,9 @@ export interface KayitliRota {
   baslik: string
   kalkis: Konum
   varis: Konum
+  uzerinden?: Konum | null
+  duraklar?: KayitliDurak[]
   olusturulma: string
 }
 
-export type RotaKaydi = Pick<KayitliRota, 'baslik' | 'kalkis' | 'varis'>
+export type RotaKaydi = Pick<KayitliRota, 'baslik' | 'kalkis' | 'varis' | 'uzerinden' | 'duraklar'>

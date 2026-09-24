@@ -65,7 +65,7 @@ Hatalar: 400 geçersiz parametre, 404 rota bulunamadı, 503 kota doldu, 502/504 
     { "enlem": 38.64, "boylam": 34.83 } ] }
 ```
 - `noktalar`: kalkış, ara noktalar, varış — **gönderilen sırayla** (sıralamayı istemci yapar: durakları `yolOrani`'na göre
-  dizer; seçili rota "X üzerinden" ise o şehir de ara nokta olarak eklenir, `durakId` olmadan). En az 2, en fazla 12 nokta.
+  dizer; seçili rota "X üzerinden" ise o şehir de ara nokta olarak eklenir, `durakId` olmadan). En az 2, en fazla 13 nokta (10 durak + ara şehir + kalkış + varış).
 - 200 →
 ```json
 { "mesafeM": 312400, "sureSn": 12100,

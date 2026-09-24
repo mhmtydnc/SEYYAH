@@ -1,17 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { api } from '../api/istemci'
 import type { KayitliRota } from '../api/tipler'
 import { useOturum } from '../oturum/Oturum'
 
-function rotaBaglantisi(rota: KayitliRota) {
-  return `/?${new URLSearchParams({
-    kalkisAd: rota.kalkis.ad, kalkisEnlem: String(rota.kalkis.enlem), kalkisBoylam: String(rota.kalkis.boylam),
-    varisAd: rota.varis.ad, varisEnlem: String(rota.varis.enlem), varisBoylam: String(rota.varis.boylam),
-  })}`
-}
-
 export function RotalarimSayfasi() {
+  const yonlendir = useNavigate()
   const { kullanici, hazir } = useOturum()
   const [rotalar, rotalarAyarla] = useState<KayitliRota[]>([])
   const [yukleniyor, yukleniyorAyarla] = useState(true)
@@ -37,6 +31,11 @@ export function RotalarimSayfasi() {
     }
   }
 
+  function ac(rota: KayitliRota) {
+    sessionStorage.setItem('seyyah-kayitli-rota', JSON.stringify(rota))
+    yonlendir(`/?kayitli=${rota.id}`)
+  }
+
   if (!hazir) return <main className="icerik-sayfasi"><p>Oturum doğrulanıyor…</p></main>
   if (!kullanici) return <Navigate to="/giris" replace />
   return <main className="icerik-sayfasi">
@@ -48,7 +47,7 @@ export function RotalarimSayfasi() {
       {rotalar.map((rota) => <li key={rota.id} className="kayitli-kart">
         <div><h2>{rota.baslik}</h2><p>{rota.kalkis.ad} → {rota.varis.ad}</p>
           <small>{new Date(rota.olusturulma).toLocaleDateString('tr-TR')}</small></div>
-        <div className="kayitli-eylemler"><Link to={rotaBaglantisi(rota)}>Aç</Link>
+        <div className="kayitli-eylemler"><button type="button" onClick={() => ac(rota)}>Aç</button>
           <button type="button" onClick={() => void sil(rota)}>Sil</button></div>
       </li>)}
     </ul>}

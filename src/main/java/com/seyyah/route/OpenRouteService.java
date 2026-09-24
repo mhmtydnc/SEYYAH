@@ -56,7 +56,7 @@ public class OpenRouteService {
         ));
     }
 
-    private RotaSonucu getRoute(List<List<Double>> coordinates) {
+    public RotaSonucu getRoute(List<List<Double>> coordinates) {
         // Varsayılan 350 m: büyük ören yerlerinin (Efes) merkezi yola bu kadar yakın değil,
         // aramada gezi yerleri de hedef olarak seçilebildiği için en yakın yol 5 km'ye kadar aranır
         List<Integer> radiuses = coordinates.stream().map(c -> YOL_ARAMA_YARICAPI_M).toList();
@@ -175,6 +175,17 @@ public class OpenRouteService {
         double distance = summary != null && summary.get("distance") instanceof Number n ? n.doubleValue() : 0.0;
         double duration = summary != null && summary.get("duration") instanceof Number n ? n.doubleValue() : 0.0;
 
-        return new RotaSonucu(sb.toString(), jsonCoords, distance, duration);
+        List<Map<String, Object>> segments = properties == null ? null
+                : (List<Map<String, Object>>) properties.get("segments");
+        List<RotaSonucu.Bacak> bacaklar = new ArrayList<>();
+        if (segments != null) {
+            for (Map<String, Object> segment : segments) {
+                double sDist = segment.get("distance") instanceof Number n ? n.doubleValue() : 0.0;
+                double sDur = segment.get("duration") instanceof Number n ? n.doubleValue() : 0.0;
+                bacaklar.add(new RotaSonucu.Bacak(sDist, sDur));
+            }
+        }
+
+        return new RotaSonucu(sb.toString(), jsonCoords, distance, duration, bacaklar);
     }
 }

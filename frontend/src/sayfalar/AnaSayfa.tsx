@@ -1,12 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api/istemci'
 import { kategoriAdi } from '../api/kategoriler'
-import type { Konum, KoridorYeri, RotaYaniti, YerTuru } from '../api/tipler'
+import type { DurakliRota, KayitliRota, Konum, KoridorYeri, RotaYaniti, YerTuru } from '../api/tipler'
 import { KonumAlani } from '../bilesenler/KonumAlani'
 import { RotaHaritasi } from '../harita/RotaHaritasi'
 import { useOturum } from '../oturum/Oturum'
 import { mesafeFarkiMetni, sureFarkiMetni, sureMetni } from './rotaBicimi'
+import { duraklariSirala, rotaNoktalari, type SeciliDurak } from '../rota/duraklar'
+import { varsayilanKalisSuresi } from '../rota/kalisSureleri'
+import { kalkisZamani, saatMetni, yuvarlanmisKalkis, zamanCizelgesi } from '../rota/zamanCizelgesi'
+import { sanalNoktalariBirlestir } from '../rota/yolculuk'
 
 const turler: { kimlik: YerTuru; ad: string }[] = [
   { kimlik: 'gezi', ad: 'Gezi' }, { kimlik: 'mola', ad: 'Mola' }, { kimlik: 'destek', ad: 'Destek' },
@@ -33,6 +37,7 @@ function guvenliSite(adres: string | null) {
 }
 
 export function AnaSayfa() {
+  const yonlendir = useNavigate()
   const { kullanici } = useOturum()
   const [kalkis, kalkisAyarla] = useState<Konum | null>(null)
   const [varis, varisAyarla] = useState<Konum | null>(null)
@@ -45,17 +50,65 @@ export function AnaSayfa() {
   const [kaydediliyor, kaydediliyorAyarla] = useState(false)
   const [hata, hataAyarla] = useState('')
   const [bildirim, bildirimAyarla] = useState('')
+  const [duraklar, duraklarAyarla] = useState<SeciliDurak[]>([])
+  const [durakliRota, durakliRotaAyarla] = useState<DurakliRota | null>(null)
+  const [durakHatasi, durakHatasiAyarla] = useState('')
+  const [durakYukleniyor, durakYukleniyorAyarla] = useState(false)
+  const [kalkisSaati, kalkisSaatiAyarla] = useState(() => yuvarlanmisKalkis())
+  const durakIstegi = useRef(0)
+  const eklenmeSirasi = useRef(0)
   const istekSirasi = useRef(0)
   const ilkSorguYapildi = useRef(false)
   const seciliRota = rota?.rotalar.find((secenek) => secenek.sira === seciliRotaSirasi) ?? null
   const anaRota = rota?.rotalar.find((secenek) => secenek.sira === 0) ?? null
+  const siraliNoktalar = useMemo(() => seciliRota ? duraklariSirala(duraklar, seciliRota) : [], [duraklar, seciliRota])
+  const haritaDuraklari = useMemo(() => siraliNoktalar.filter((nokta) => nokta.durak), [siraliNoktalar])
+  const planNoktalari = [...siraliNoktalar, ...(varis ? [{ ...varis }] : [])]
+  const bacaklar = durakliRota?.bacaklar ?? []
+  const cizelge = zamanCizelgesi(kalkisZamani(kalkisSaati), planNoktalari, bacaklar)
+  const toplamKalis = duraklar.reduce((toplam, durak) => toplam + durak.kalisDakika, 0)
+
+  function durakEklenebilir(yer: KoridorYeri): boolean {
+    if (duraklar.some((durak) => durak.yer.id === yer.id)) return true
+    return duraklar.length < 10
+  }
+
+  function durakDegistir(yer: KoridorYeri) {
+    duraklarAyarla((eskiler) => {
+      if (eskiler.some((durak) => durak.yer.id === yer.id)) return eskiler.filter((durak) => durak.yer.id !== yer.id)
+      if (!durakEklenebilir(yer)) return eskiler
+      return [...eskiler, { yer, kalisDakika: varsayilanKalisSuresi(yer.kategori), eklenmeSirasi: eklenmeSirasi.current++ }]
+    })
+  }
+
+  useEffect(() => {
+    durakIstegi.current++
+    durakliRotaAyarla(null)
+    durakHatasiAyarla('')
+    durakYukleniyorAyarla(false)
+    if (!seciliRota || !kalkis || !varis || !duraklar.length) return
+    if (duraklariSirala(duraklar, seciliRota).length > 10) {
+      durakHatasiAyarla('Bu alternatifte ara şehir de rota noktasıdır. Duraklı rotayı hesaplamak için bir durağı çıkarın.')
+      return
+    }
+    const sira = durakIstegi.current
+    const denetleyici = new AbortController()
+    const zamanlayici = window.setTimeout(() => {
+      durakYukleniyorAyarla(true)
+      api.durakliRotaOlustur(rotaNoktalari(kalkis, varis, duraklariSirala(duraklar, seciliRota)), denetleyici.signal)
+        .then((gelen) => { if (sira === durakIstegi.current) durakliRotaAyarla(gelen) })
+        .catch((neden: unknown) => { if (sira === durakIstegi.current && !(neden instanceof Error && neden.name === 'AbortError')) durakHatasiAyarla(neden instanceof Error ? neden.message : 'Duraklı rota oluşturulamadı.') })
+        .finally(() => { if (sira === durakIstegi.current) durakYukleniyorAyarla(false) })
+    }, 400)
+    return () => { window.clearTimeout(zamanlayici); denetleyici.abort() }
+  }, [seciliRota, kalkis, varis, duraklar])
 
   function rotaSec(sira: number) {
     seciliRotaSirasiAyarla(sira)
     seciliYerAyarla(null)
   }
 
-  async function rotaGetir(baslangic: Konum, bitis: Konum, yaricapM: number) {
+  async function rotaGetir(baslangic: Konum, bitis: Konum, yaricapM: number, kayit?: KayitliRota) {
     const sira = ++istekSirasi.current
     yukleniyorAyarla(true)
     hataAyarla('')
@@ -66,8 +119,12 @@ export function AnaSayfa() {
     try {
       const gelen = await api.rotaOlustur(baslangic, bitis, yaricapM)
       if (sira === istekSirasi.current) {
-        seciliRotaSirasiAyarla(0)
+        seciliRotaSirasiAyarla(gelen.rotalar.find((secenek) => secenek.uzerinden === (kayit?.uzerinden?.ad ?? null))?.sira ?? 0)
         rotaAyarla(gelen)
+        if (kayit) {
+          duraklarAyarla((kayit.duraklar ?? []).map((yer, sira) => ({ yer, kalisDakika: varsayilanKalisSuresi(yer.kategori), eklenmeSirasi: sira })))
+          eklenmeSirasi.current = kayit.duraklar?.length ?? 0
+        }
       }
     } catch (neden) {
       if (sira === istekSirasi.current) hataAyarla(neden instanceof Error ? neden.message : 'Rota oluşturulamadı.')
@@ -80,6 +137,20 @@ export function AnaSayfa() {
     if (ilkSorguYapildi.current) return
     ilkSorguYapildi.current = true
     const parametreler = new URLSearchParams(window.location.search)
+    const kayitli = parametreler.get('kayitli')
+    if (kayitli) {
+      const saklanan = sessionStorage.getItem('seyyah-kayitli-rota')
+      if (!saklanan) { hataAyarla('Kayıtlı rota bu sekmede bulunamadı. Rotalarım sayfasından yeniden açın.'); return }
+      try {
+        const kayit = JSON.parse(saklanan) as KayitliRota
+        if (String(kayit.id) !== kayitli) throw new Error('Kayıtlı rota eşleşmiyor.')
+        sessionStorage.removeItem('seyyah-kayitli-rota')
+        kalkisAyarla(kayit.kalkis)
+        varisAyarla(kayit.varis)
+        void rotaGetir(kayit.kalkis, kayit.varis, 5000, kayit)
+      } catch (neden) { hataAyarla(neden instanceof Error ? neden.message : 'Kayıtlı rota açılamadı.') }
+      return
+    }
     const baslangic = sorgudanKonum(parametreler, 'kalkis')
     const bitis = sorgudanKonum(parametreler, 'varis')
     if (!baslangic || !bitis) return
@@ -99,6 +170,7 @@ export function AnaSayfa() {
     rotaAyarla(null)
     seciliRotaSirasiAyarla(0)
     seciliYerAyarla(null)
+    duraklarAyarla([])
     bildirimAyarla('')
   }
 
@@ -108,13 +180,28 @@ export function AnaSayfa() {
     hataAyarla('')
     try {
       const ek = seciliRota?.sira !== 0 && seciliRota?.uzerinden ? ` (${seciliRota.uzerinden} üzerinden)` : ''
-      await api.rotaKaydet({ baslik: `${kalkis.ad} - ${varis.ad}${ek}`, kalkis, varis })
+      await api.rotaKaydet({ baslik: `${kalkis.ad} - ${varis.ad}${ek}`, kalkis, varis,
+        uzerinden: seciliRota?.araNokta ?? null,
+        duraklar: siraliNoktalar.filter((nokta) => nokta.durak).map((nokta) => {
+          const { id, ad, kategori, enlem, boylam } = nokta.durak!.yer
+          return { id, ad, kategori, enlem, boylam }
+        }) })
       bildirimAyarla('Rota kaydedildi.')
     } catch (neden) {
       hataAyarla(neden instanceof Error ? neden.message : 'Rota kaydedilemedi.')
     } finally {
       kaydediliyorAyarla(false)
     }
+  }
+
+  function yolculugaBasla() {
+    if (!varis || !durakliRota || !duraklar.length) return
+    const { noktalar, bacaklar } = sanalNoktalariBirlestir(planNoktalari, durakliRota.bacaklar)
+    localStorage.setItem('seyyah-yolculuk', JSON.stringify({
+      noktalar, bacaklar, kalkisSaati,
+      varis, baslangic: kalkisZamani(kalkisSaati).toISOString(), sira: 0,
+    }))
+    yonlendir('/yolculuk')
   }
 
   return <main className="ana-sayfa">
@@ -140,6 +227,7 @@ export function AnaSayfa() {
 
     {hata && <div className="uyari hata" role="alert">{hata}</div>}
     {bildirim && <div className="uyari basari" role="status">{bildirim}</div>}
+    {durakHatasi && <div className="uyari hata" role="alert">{durakHatasi}</div>}
 
     {seciliRota && <div className={rota && rota.rotalar.length > 1 ? 'rota-secim-alani' : 'rota-ozeti'}>
       {rota && rota.rotalar.length > 1 ? <div className="rota-kartlari" aria-label="Alternatif rotalar">
@@ -162,10 +250,35 @@ export function AnaSayfa() {
         : <Link to="/giris">Rotayı kaydetmek için giriş yap</Link>}</div>
     </div>}
 
+    {seciliRota && duraklar.length > 0 && <section className="durak-ozeti" aria-label="Duraklı rota özeti">
+      <div><span>Toplam mesafe</span><strong>{((durakliRota?.mesafeM ?? seciliRota.mesafeM) / 1000).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} km</strong></div>
+      <div><span>Yol süresi</span><strong>{sureMetni(durakliRota?.sureSn ?? seciliRota.sureSn)}</strong></div>
+      <div><span>Sapma</span><strong>{durakliRota ? `${sureFarkiMetni(durakliRota.sureSn - seciliRota.sureSn)} yol` : 'Hesaplanıyor…'}</strong></div>
+      <div><span>Toplam kalış</span><strong>{toplamKalis} dk</strong></div>
+      <button className="birincil" type="button" onClick={yolculugaBasla} disabled={!durakliRota || durakYukleniyor}>Yolculuğa başla</button>
+    </section>}
+
     <section className="sonuc-alani" aria-label="Rota ve yerler">
-      <div className="harita-kutusu"><RotaHaritasi rota={rota} seciliRota={seciliRota} rotaSec={rotaSec} kalkis={kalkis} varis={varis} seciliYer={seciliYer} /></div>
+      <div className="harita-kutusu"><RotaHaritasi rota={rota} seciliRota={seciliRota} rotaSec={rotaSec} kalkis={kalkis} varis={varis} seciliYer={seciliYer}
+        durakliRota={durakliRota} siraliDuraklar={haritaDuraklari} duraklar={duraklar} durakDegistir={durakDegistir} durakEklenebilir={durakEklenebilir} /></div>
       <aside className="yer-paneli">
         <div className="panel-baslik"><h2>Yol üstünde</h2><span>{rota ? 'Rotandaki noktalar' : 'Önce bir rota oluştur'}</span></div>
+        {duraklar.length > 0 && <section className="duraklarim" aria-label="Duraklarım">
+          <h3>Duraklarım</h3>
+          <label className="kalkis-saati">Kalkış saati <input type="time" value={kalkisSaati} onChange={(olay) => kalkisSaatiAyarla(olay.target.value)} /></label>
+          <ol>{siraliNoktalar.filter((nokta) => nokta.durak).map((nokta, sira) => {
+            const zaman = cizelge.find((satir) => satir.nokta === nokta)?.varis
+            return <li key={nokta.durak!.yer.id}>
+              <div><strong>{sira + 1}. {nokta.ad}</strong><small>Varış: {durakliRota && zaman ? saatMetni(zaman) : 'Hesaplanıyor…'}</small>
+                {nokta.durak!.yer.calismaSaatleri && <small>Çalışma saatleri: {nokta.durak!.yer.calismaSaatleri}</small>}</div>
+              <label>Kalış (dk)<input type="number" min="0" max="1440" value={nokta.durak!.kalisDakika}
+                onChange={(olay) => duraklarAyarla((eskiler) => eskiler.map((durak) => durak.yer.id === nokta.durak!.yer.id
+                  ? { ...durak, kalisDakika: Math.max(0, Math.min(1440, Number(olay.target.value) || 0)) } : durak))} /></label>
+              <button type="button" onClick={() => duraklarAyarla((eskiler) => eskiler.filter((durak) => durak.yer.id !== nokta.durak!.yer.id))}>Çıkar</button>
+            </li>
+          })}</ol>
+          <p className="varis-saati">Varış: {varis?.ad} · {durakliRota && cizelge.length ? saatMetni(cizelge[cizelge.length - 1].varis) : 'Hesaplanıyor…'}</p>
+        </section>}
         <div className="sekmeler" role="tablist" aria-label="Yer türü">
           {turler.map((tur) => <button key={tur.kimlik} type="button" role="tab" aria-selected={etkinTur === tur.kimlik}
             className={etkinTur === tur.kimlik ? 'etkin' : ''} onClick={() => etkinTurAyarla(tur.kimlik)}>
@@ -182,6 +295,8 @@ export function AnaSayfa() {
                 {yer.calismaSaatleri && <small>Çalışma saatleri: {yer.calismaSaatleri}</small>}
                 {yer.ucret != null && <small>Ücret: {yer.ucret}</small>}
                 {guvenliSite(yer.website) && <a href={guvenliSite(yer.website)!} target="_blank" rel="noopener noreferrer">Web sitesi ↗</a>}
+                <button type="button" className="durak-dugmesi" disabled={!durakEklenebilir(yer)}
+                  onClick={() => durakDegistir(yer)}>{duraklar.some((durak) => durak.yer.id === yer.id) ? 'Duraktan çıkar' : '+ Durak ekle'}</button>
               </div>)}
         </div>
       </aside>
