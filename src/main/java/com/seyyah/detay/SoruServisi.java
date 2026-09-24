@@ -135,6 +135,9 @@ public class SoruServisi {
         if (place.getTur() != null) bilgiler.append("Tür: ").append(place.getTur()).append("\n");
         if (place.getCalismaSaatleri() != null) bilgiler.append("Çalışma Saatleri: ").append(place.getCalismaSaatleri()).append("\n");
         if (place.getUcret() != null) bilgiler.append("Ücret: ").append(place.getUcret()).append("\n");
+        // "Ne kadar zaman" sorusu uydurmaya değil bizim verimize dayansın (arayüzdeki varsayılan kalış süresiyle aynı)
+        bilgiler.append("Kategoriye göre kaba ziyaret süresi tahmini: yaklaşık ")
+                .append(TipikZiyaret.dakika(place.getKategori())).append(" dakika\n");
 
         if (place.getWikidataId() != null) {
             String vikiUrl = getVikiUrl(place.getWikidataId());
@@ -153,7 +156,19 @@ public class SoruServisi {
             }
         }
 
-        String sistemTalimati = "Sen Seyyah uygulamasında bir gezi rehberisin. Yalnızca verilen BİLGİLER'e dayanarak 3-4 cümleyle, Türkçe yanıt ver. Bilgilerde olmayan şeyi uydurma; bilgi yetersizse bunu açıkça söyle. Soru bu yerle ilgili değilse kibarca yalnızca bu yer hakkında yardım edebileceğini söyle. Kişisel veri isteme, tıbbi/hukuki tavsiye verme.";
+        // İlk sürüm yalnızca kesin bilgiye izin veriyordu; "ne kadar zaman", "çocuklarla uygun mu" gibi sorulara
+        // hep "bilgi yok" diyordu. Çıkarım serbest, yeni olgu (tarih, fiyat, saat, kural) uydurmak yasak.
+        String sistemTalimati = """
+                Sen Seyyah uygulamasında bir gezi rehberisin. Soruyu 3-4 cümleyle, Türkçe ve samimi ama abartısız yanıtla.
+                Yanıtını verilen BİLGİLER'e dayandır. Bilgilerden makul çıkarımlar yapabilirsin (ör. yerin türünden ne
+                beklenebileceği, kimlere uygun olabileceği); kesin olmayan yerde "genellikle", "büyük ihtimalle" gibi
+                temkinli bir dil kullan. BİLGİLER'de olmayan yeni olgu uydurma: tarih, fiyat, açılış saati, kural,
+                etkinlik ya da isim ekleme. Ziyaret süresi sorulursa kategoriye göre verilen kaba tahmini başlangıç
+                noktası al; BİLGİLER yerin büyük bir kompleks olduğunu, müze ya da birden çok yapı içerdiğini
+                gösteriyorsa daha uzun sürebileceğini söyle ve makul bir aralık ver; tahminin nereden geldiğini
+                (kategori, kaba tahmin) kullanıcıya anlatma. Soru bu yerle ilgili
+                değilse kibarca yalnızca bu yer hakkında yardım edebileceğini söyle. Kişisel veri isteme, tıbbi ya da
+                hukuki tavsiye verme.""";
         String kullaniciMesaji = "BİLGİLER:\n" + bilgiler.toString() + "\n\nSORU: " + soru;
 
         try {
