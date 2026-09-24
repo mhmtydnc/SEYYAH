@@ -12,6 +12,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
@@ -34,6 +35,8 @@ class OpenRouteServiceTest {
         sunucu.expect(requestTo(URL))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header(HttpHeaders.AUTHORIZATION, "test-anahtar"))
+                .andExpect(jsonPath("$.radiuses[0]").value(5000))
+                .andExpect(jsonPath("$.radiuses[1]").value(5000))
                 .andRespond(withSuccess("""
                         {"type":"FeatureCollection","features":[{"properties":{"summary":{"distance":120.5,"duration":300}},"geometry":{"type":"LineString",
                          "coordinates":[[29.0,41.0],[29.5,40.5],[32,39.9]]}}]}

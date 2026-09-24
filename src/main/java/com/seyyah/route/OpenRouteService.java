@@ -24,6 +24,8 @@ public class OpenRouteService {
 
     private static final Logger log = LoggerFactory.getLogger(OpenRouteService.class);
 
+    private static final int YOL_ARAMA_YARICAPI_M = 5000;
+
     private final RestClient restClient;
 
     // Boot'un hazırladığı builder kullanılır: zaman aşımları spring.http.client.* ayarlarından gelir
@@ -45,7 +47,10 @@ public class OpenRouteService {
                 "coordinates", List.of(
                         List.of(startLon, startLat),
                         List.of(endLon, endLat)
-                )
+                ),
+                // Varsayılan 350 m: büyük ören yerlerinin (Efes) merkezi yola bu kadar yakın değil,
+                // aramada gezi yerleri de hedef olarak seçilebildiği için en yakın yol 5 km'ye kadar aranır
+                "radiuses", List.of(YOL_ARAMA_YARICAPI_M, YOL_ARAMA_YARICAPI_M)
         );
 
         Map<String, Object> response;
