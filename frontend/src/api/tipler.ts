@@ -26,12 +26,14 @@ export interface KoridorYeri {
 }
 
 export interface YerDetayi extends Pick<KoridorYeri, 'id' | 'ad' | 'kategori' | 'tur' | 'enlem' | 'boylam' | 'ucret' | 'calismaSaatleri' | 'website'> {
+  ozet?: { metin: string; vikipedi: string | null } | null
   wikidata: {
     aciklama: string | null
     vikipedi: string | null
     gorsel: { url: string; sayfa: string; yazar: string | null; lisans: string | null } | null
   } | null
-  google: { puan: number; yorumSayisi: number; haritaBaglantisi: string | null } | null
+  google: { puan: number; yorumSayisi: number; haritaBaglantisi: string | null
+    yorumlar?: { yazar: string; yazarBaglantisi: string | null; puan: number; metin: string; zaman: string }[] } | null
 }
 
 export interface Rota {
