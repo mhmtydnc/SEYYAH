@@ -13,6 +13,8 @@
 }
 
 * { box-sizing: border-box; }
+/* Kesirli ekran ölçeğinde (Windows %125) karolar arasında 1 px boşluk kalıyor; 1 px örtüşme kapatır */
+.leaflet-tile-container img.leaflet-tile { width: 257px !important; height: 257px !important; }
 body { margin: 0; min-width: 320px; }
 button, input, select { font: inherit; }
 button { cursor: pointer; }
@@ -61,6 +63,9 @@ h1 { font-size: clamp(30px, 4vw, 48px); letter-spacing: -.04em; line-height: 1.0
 .harita-kutusu, .yer-paneli { background: #fff; border: 1px solid var(--kenar); border-radius: 14px; overflow: hidden; }
 .harita-kutusu { min-height: 530px; }
 .harita { height: 100%; min-height: 530px; width: 100%; }
+.harita-lejandi { position: absolute; z-index: 1000; top: 10px; right: 10px; display: grid; gap: 6px; padding: 9px 11px; border-radius: 7px; background: #fff; box-shadow: 0 1px 5px #0004; font-size: 12px; }
+.harita-lejandi span { display: flex; align-items: center; gap: 7px; }
+.harita-lejandi i { width: 10px; height: 10px; border-radius: 50%; }
 .yer-paneli { display: flex; flex-direction: column; max-height: 530px; }
 .panel-baslik { padding: 20px 20px 12px; }
 .panel-baslik h2 { margin: 0 0 4px; font-size: 22px; }
@@ -114,7 +119,15 @@ h1 { font-size: clamp(30px, 4vw, 48px); letter-spacing: -.04em; line-height: 1.0
   .yer-listesi { max-height: 500px; }
 }
 @media (max-width: 520px) {
+  .ust-icerik { padding: 10px 12px; gap: 8px; }
+  .logo { font-size: 21px; }
+  .ust-cubuk nav { gap: 8px; font-size: 12px; }
+  .kayit-baglanti { padding: 8px 10px; }
   .rota-formu { grid-template-columns: 1fr; }
+  .rota-formu .birincil { width: 100%; }
+  .sonuc-alani { display: flex; flex-direction: column; }
+  .harita-kutusu, .harita { height: 55vh; min-height: 55vh; }
+  .yer-paneli { order: 2; }
   .rota-ozeti { flex-wrap: wrap; gap: 15px 25px; }
   .kaydet-alani { flex-basis: 100%; margin-left: 0; }
   .kayitli-kart { align-items: flex-start; flex-direction: column; }

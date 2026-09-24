@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { CircleMarker, MapContainer, Popup, Polyline, TileLayer, useMap } from 'react-leaflet'
 import { latLngBounds, type CircleMarker as LeafletDaire, type LatLngTuple } from 'leaflet'
 import type { Konum, KoridorYeri, RotaYaniti, YerTuru } from '../api/tipler'
+import { kategoriAdi } from '../api/kategoriler'
 import { leafletKoordinatlari } from './koordinat'
 
 const renkler: Record<YerTuru, string> = { gezi: '#d55b38', mola: '#2b8a73', destek: '#3d71b0' }
@@ -27,7 +28,7 @@ function YerIsareti({ yer, secili }: { yer: KoridorYeri; secili: boolean }) {
   useEffect(() => { if (secili) isaret.current?.openPopup() }, [secili])
   return <CircleMarker ref={isaret} center={[yer.enlem, yer.boylam]} radius={secili ? 9 : 7}
     pathOptions={{ color: '#fff', weight: 2, fillColor: renkler[yer.tur], fillOpacity: 1 }}>
-    <Popup><strong>{yer.ad}</strong><br />{yer.kategori}</Popup>
+    <Popup><strong>{yer.ad}</strong><br />{kategoriAdi(yer.kategori)}</Popup>
   </CircleMarker>
 }
 
@@ -35,6 +36,11 @@ export function RotaHaritasi({ rota, kalkis, varis, seciliYer }: {
   rota: RotaYaniti | null; kalkis: Konum | null; varis: Konum | null; seciliYer: KoridorYeri | null
 }) {
   return <MapContainer center={[39, 35]} zoom={6} scrollWheelZoom className="harita" aria-label="Rota haritası">
+    <div className="harita-lejandi" aria-label="Harita açıklaması">
+      {(['gezi', 'mola', 'destek'] as YerTuru[]).map((tur) => <span key={tur}>
+        <i style={{ backgroundColor: renkler[tur] }} />{tur[0].toLocaleUpperCase('tr-TR') + tur.slice(1)}
+      </span>)}
+    </div>
     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> katkıda bulunanlar' />
     <HaritaOdak rota={rota} kalkis={kalkis} varis={varis} seciliYer={seciliYer} />
