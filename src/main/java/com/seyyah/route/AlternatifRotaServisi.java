@@ -54,7 +54,7 @@ public class AlternatifRotaServisi {
             List<RotaSecenegi> adlandirilmis = new ArrayList<>();
             int no = 1;
             for (RotaSecenegi rs : sirali) {
-                adlandirilmis.add(rs.uzerinden() != null ? rs : new RotaSecenegi(rs.sonuc(), "Alternatif " + no++, null));
+                adlandirilmis.add(rs.uzerinden() != null ? rs : new RotaSecenegi(rs.sonuc(), "Alternatif " + no++, null, null));
             }
             return adlandirilmis;
         } catch (Exception e) {
@@ -74,7 +74,7 @@ public class AlternatifRotaServisi {
         List<RotaSecenegi> sonuc = new ArrayList<>();
         int sira = 1;
         for (RotaSonucu alternatif : hepsi.subList(1, hepsi.size())) {
-            sonuc.add(new RotaSecenegi(alternatif, "Alternatif " + sira, null));
+            sonuc.add(new RotaSecenegi(alternatif, "Alternatif " + sira, null, null));
             sira++;
         }
         return sonuc;
@@ -125,8 +125,9 @@ public class AlternatifRotaServisi {
                 continue;
             }
             kabulEdilenler.add(adayRota);
-            String ad = denenecekler.get(i).ad();
-            sonuc.add(new RotaSecenegi(adayRota, ad + " üzerinden", ad));
+            AdayKonum aday = denenecekler.get(i);
+            String ad = aday.ad();
+            sonuc.add(new RotaSecenegi(adayRota, ad + " üzerinden", ad, new AraNokta(ad, aday.enlem(), aday.boylam())));
         }
         log.info("Ara şehir: {} aday, ORS {} ms, eleme {} ms", denenecekler.size(),
                 (t1 - t0) / 1_000_000, (System.nanoTime() - t1) / 1_000_000);
@@ -195,6 +196,6 @@ public class AlternatifRotaServisi {
     }
 
     // sonuc: ORS/SQL'den gelen ham rota; ad: kullanıcıya gösterilecek isim; uzerinden: ara şehir adı (varsa)
-    public record RotaSecenegi(RotaSonucu sonuc, String ad, String uzerinden) {
+    public record RotaSecenegi(RotaSonucu sonuc, String ad, String uzerinden, AraNokta araNokta) {
     }
 }

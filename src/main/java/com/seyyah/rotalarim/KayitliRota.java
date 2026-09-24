@@ -6,9 +6,14 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import com.seyyah.route.AraNokta;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "kayitli_rotalar")
@@ -45,6 +50,14 @@ public class KayitliRota {
     @CreationTimestamp
     @Column(name = "olusturulma", nullable = false, updatable = false)
     private OffsetDateTime olusturulma;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "uzerinden", columnDefinition = "jsonb")
+    private AraNokta uzerinden;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "duraklar", columnDefinition = "jsonb", nullable = false)
+    private List<Durak> duraklar = new ArrayList<>();
 
     public Long getId() {
         return id;
@@ -121,4 +134,21 @@ public class KayitliRota {
     public OffsetDateTime getOlusturulma() {
         return olusturulma;
     }
+
+    public AraNokta getUzerinden() {
+        return uzerinden;
+    }
+
+    public void setUzerinden(AraNokta uzerinden) {
+        this.uzerinden = uzerinden;
+    }
+
+    public List<Durak> getDuraklar() {
+        return duraklar;
+    }
+
+    public void setDuraklar(List<Durak> duraklar) {
+        this.duraklar = duraklar;
+    }
 }
+

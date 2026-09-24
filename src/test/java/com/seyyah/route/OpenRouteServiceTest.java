@@ -74,6 +74,35 @@ class OpenRouteServiceTest {
     }
 
     @Test
+    void cokNoktaliRotaIstegiVeSegmentler() {
+        sunucu.expect(requestTo(URL))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(jsonPath("$.coordinates.length()").value(3))
+                .andExpect(jsonPath("$.radiuses.length()").value(3))
+                .andExpect(jsonPath("$.radiuses[0]").value(5000))
+                .andExpect(jsonPath("$.radiuses[1]").value(5000))
+                .andExpect(jsonPath("$.radiuses[2]").value(5000))
+                .andRespond(withSuccess("""
+                        {"type":"FeatureCollection","features":[{"properties":{
+                          "summary":{"distance":250,"duration":600},
+                          "segments":[{"distance":100,"duration":200}, {"distance":150,"duration":400}]
+                        },"geometry":{"type":"LineString", "coordinates":[[29.0,41.0],[29.5,40.5],[32,39.9]]}}]}
+                        """, MediaType.APPLICATION_JSON));
+
+        RotaSonucu sonuc = servis.getRoute(java.util.List.of(
+                java.util.List.of(29.0, 41.0),
+                java.util.List.of(29.5, 40.5),
+                java.util.List.of(32.0, 39.9)
+        ));
+        
+        assertThat(sonuc.bacaklar()).hasSize(2);
+        assertThat(sonuc.bacaklar().get(0).mesafeM()).isEqualTo(100);
+        assertThat(sonuc.bacaklar().get(0).sureSn()).isEqualTo(200);
+        assertThat(sonuc.bacaklar().get(1).mesafeM()).isEqualTo(150);
+        assertThat(sonuc.bacaklar().get(1).sureSn()).isEqualTo(400);
+    }
+
+    @Test
     void bosFeatureListesiRotaBulunamadiSayilir() {
         sunucu.expect(requestTo(URL))
                 .andRespond(withSuccess("{\"features\":[]}", MediaType.APPLICATION_JSON));

@@ -9,9 +9,12 @@ import jakarta.validation.constraints.Min;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -57,8 +60,8 @@ public class RotaController {
         long t2 = System.nanoTime();
 
         List<RotaTanimi> tanimlar = new ArrayList<>();
-        tanimlar.add(new RotaTanimi("En hızlı", null, ana));
-        alternatifler.forEach(a -> tanimlar.add(new RotaTanimi(a.ad(), a.uzerinden(), a.sonuc())));
+        tanimlar.add(new RotaTanimi("En hızlı", null, null, ana));
+        alternatifler.forEach(a -> tanimlar.add(new RotaTanimi(a.ad(), a.uzerinden(), a.araNokta(), a.sonuc())));
 
         List<RotaYaniti.Rota> rotalar = rotalariOlustur(tanimlar, yaricap, limit);
         // Uzun rotalarda yanıt süresi hangi aşamada harcanıyor, canlıda da görülebilsin
@@ -68,7 +71,7 @@ public class RotaController {
         return new RotaYaniti(rotalar);
     }
 
-    private record RotaTanimi(String ad, String uzerinden, RotaSonucu sonuc) {
+    private record RotaTanimi(String ad, String uzerinden, AraNokta araNokta, RotaSonucu sonuc) {
     }
 
     private static final List<String> TURLER = List.of("gezi", "mola", "destek");
@@ -92,8 +95,8 @@ public class RotaController {
                 RotaTanimi tanim = tanimlar.get(sira);
                 Map<String, List<KoridorYeri>> yerler = new LinkedHashMap<>();
                 sorgular.get(sira).forEach((tur, sorgu) -> yerler.put(tur, sonucuAl(sorgu)));
-                rotalar.add(new RotaYaniti.Rota(sira, tanim.ad(), tanim.uzerinden(), tanim.sonuc().mesafeM(),
-                        tanim.sonuc().sureSn(), tanim.sonuc().koordinatlar(), yerler));
+                rotalar.add(new RotaYaniti.Rota(sira, tanim.ad(), tanim.uzerinden(), tanim.araNokta(), tanim.sonuc().mesafeM(),
+                        tanim.sonuc().sureSn(), CizgiSadelestirici.sadelestir(tanim.sonuc().koordinatlar(), CizgiSadelestirici.VARSAYILAN_TOLERANS), yerler));
             }
             return rotalar;
         }
@@ -110,5 +113,21 @@ public class RotaController {
             Thread.currentThread().interrupt();
             throw new IllegalStateException(e);
         }
+    }
+
+    @PostMapping("/duraklu")
+    public DurakliRotaYaniti durakliRota(@Valid @RequestBody DurakliRotaIstegi istek) {
+        List<List<Double>> koordinatlar = istek.noktalar().stream()
+                .map(n -> List.of(n.boylam(), n.enlem()))
+                .toList();
+
+        RotaSonucu sonuc = openRouteService.getRoute(koordinatlar);
+
+        return new DurakliRotaYaniti(
+                sonuc.mesafeM(),
+                sonuc.sureSn(),
+                CizgiSadelestirici.sadelestir(sonuc.koordinatlar(), CizgiSadelestirici.VARSAYILAN_TOLERANS),
+                sonuc.bacaklar()
+        );
     }
 }
