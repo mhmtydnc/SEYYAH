@@ -13,7 +13,7 @@ import { duraklariSirala, rotaNoktalari, type SeciliDurak } from '../rota/durakl
 import { varsayilanKalisSuresi } from '../rota/kalisSureleri'
 import { kalkisZamani, saatMetni, yuvarlanmisKalkis, zamanCizelgesi } from '../rota/zamanCizelgesi'
 import { sanalNoktalariBirlestir } from '../rota/yolculuk'
-import { uyariMetni } from '../rota/acilisSaati'
+import { acilisSaatiYukle, uyariMetni } from '../rota/acilisSaati'
 
 const turler: { kimlik: YerTuru; ad: string }[] = [
   { kimlik: 'gezi', ad: 'Gezi' }, { kimlik: 'mola', ad: 'Mola' }, { kimlik: 'destek', ad: 'Destek' },
@@ -49,6 +49,7 @@ export function AnaSayfa() {
   const [durakHatasi, durakHatasiAyarla] = useState('')
   const [durakYukleniyor, durakYukleniyorAyarla] = useState(false)
   const [kalkisSaati, kalkisSaatiAyarla] = useState(() => yuvarlanmisKalkis())
+  const [, acilisSaatiSayaciAyarla] = useState(0)
   const durakIstegi = useRef(0)
   const eklenmeSirasi = useRef(0)
   const istekSirasi = useRef(0)
@@ -63,6 +64,13 @@ export function AnaSayfa() {
   const bacaklar = durakliRota?.bacaklar ?? []
   const cizelge = zamanCizelgesi(kalkisZamani(kalkisSaati), planNoktalari, bacaklar)
   const toplamKalis = duraklar.reduce((toplam, durak) => toplam + durak.kalisDakika, 0)
+
+  useEffect(() => {
+    if (!duraklar.some((durak) => durak.yer.calismaSaatleri?.trim())) return
+    let etkin = true
+    void acilisSaatiYukle().then(() => { if (etkin) acilisSaatiSayaciAyarla((sayi) => sayi + 1) })
+    return () => { etkin = false }
+  }, [duraklar])
 
   function durakEklenebilir(yer: KoridorYeri): boolean {
     if (duraklar.some((durak) => durak.yer.id === yer.id)) return true
