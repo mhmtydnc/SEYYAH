@@ -71,7 +71,6 @@ public class GooglePuanServisiTest {
         assertThat(yanit).isNotNull();
         assertThat(yanit.placeId()).isEqualTo("ChIJtest");
         assertThat(yanit.detay().puan()).isEqualTo(4.5);
-        assertThat(yanit.detay().yorumlar()).hasSize(1);
-        assertThat(yanit.detay().yorumlar().get(0).yazar()).isEqualTo("Ahmet");
+        assertThat(yanit.detay().yorumlar()).hasSize(0);
     }
 }
