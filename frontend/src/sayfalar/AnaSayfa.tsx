@@ -6,6 +6,7 @@ import type { Konum, KoridorYeri, RotaYaniti, YerTuru } from '../api/tipler'
 import { KonumAlani } from '../bilesenler/KonumAlani'
 import { RotaHaritasi } from '../harita/RotaHaritasi'
 import { useOturum } from '../oturum/Oturum'
+import { mesafeFarkiMetni, sureFarkiMetni, sureMetni } from './rotaBicimi'
 
 const turler: { kimlik: YerTuru; ad: string }[] = [
   { kimlik: 'gezi', ad: 'Gezi' }, { kimlik: 'mola', ad: 'Mola' }, { kimlik: 'destek', ad: 'Destek' },
@@ -19,11 +20,6 @@ function sorgudanKonum(parametreler: URLSearchParams, onEk: string): Konum | nul
     || !Number.isFinite(enlem) || !Number.isFinite(boylam)
     || Math.abs(enlem) > 90 || Math.abs(boylam) > 180) return null
   return { ad, enlem, boylam }
-}
-
-function sureMetni(saniye: number) {
-  const dakika = Math.round(saniye / 60)
-  return `${Math.floor(dakika / 60)} sa ${dakika % 60} dk`
 }
 
 function guvenliSite(adres: string | null) {
@@ -42,6 +38,7 @@ export function AnaSayfa() {
   const [varis, varisAyarla] = useState<Konum | null>(null)
   const [yaricap, yaricapAyarla] = useState(5000)
   const [rota, rotaAyarla] = useState<RotaYaniti | null>(null)
+  const [seciliRotaSirasi, seciliRotaSirasiAyarla] = useState(0)
   const [etkinTur, etkinTurAyarla] = useState<YerTuru>('gezi')
   const [seciliYer, seciliYerAyarla] = useState<KoridorYeri | null>(null)
   const [yukleniyor, yukleniyorAyarla] = useState(false)
@@ -50,6 +47,13 @@ export function AnaSayfa() {
   const [bildirim, bildirimAyarla] = useState('')
   const istekSirasi = useRef(0)
   const ilkSorguYapildi = useRef(false)
+  const seciliRota = rota?.rotalar.find((secenek) => secenek.sira === seciliRotaSirasi) ?? null
+  const anaRota = rota?.rotalar.find((secenek) => secenek.sira === 0) ?? null
+
+  function rotaSec(sira: number) {
+    seciliRotaSirasiAyarla(sira)
+    seciliYerAyarla(null)
+  }
 
   async function rotaGetir(baslangic: Konum, bitis: Konum, yaricapM: number) {
     const sira = ++istekSirasi.current
@@ -57,10 +61,14 @@ export function AnaSayfa() {
     hataAyarla('')
     bildirimAyarla('')
     rotaAyarla(null)
+    seciliRotaSirasiAyarla(0)
     seciliYerAyarla(null)
     try {
       const gelen = await api.rotaOlustur(baslangic, bitis, yaricapM)
-      if (sira === istekSirasi.current) rotaAyarla(gelen)
+      if (sira === istekSirasi.current) {
+        seciliRotaSirasiAyarla(0)
+        rotaAyarla(gelen)
+      }
     } catch (neden) {
       if (sira === istekSirasi.current) hataAyarla(neden instanceof Error ? neden.message : 'Rota oluşturulamadı.')
     } finally {
@@ -89,6 +97,7 @@ export function AnaSayfa() {
     if (tur === 'kalkis') kalkisAyarla(konum)
     else varisAyarla(konum)
     rotaAyarla(null)
+    seciliRotaSirasiAyarla(0)
     seciliYerAyarla(null)
     bildirimAyarla('')
   }
@@ -98,7 +107,8 @@ export function AnaSayfa() {
     kaydediliyorAyarla(true)
     hataAyarla('')
     try {
-      await api.rotaKaydet({ baslik: `${kalkis.ad} - ${varis.ad}`, kalkis, varis })
+      const ek = seciliRota?.sira !== 0 && seciliRota?.uzerinden ? ` (${seciliRota.uzerinden} üzerinden)` : ''
+      await api.rotaKaydet({ baslik: `${kalkis.ad} - ${varis.ad}${ek}`, kalkis, varis })
       bildirimAyarla('Rota kaydedildi.')
     } catch (neden) {
       hataAyarla(neden instanceof Error ? neden.message : 'Rota kaydedilemedi.')
@@ -131,28 +141,41 @@ export function AnaSayfa() {
     {hata && <div className="uyari hata" role="alert">{hata}</div>}
     {bildirim && <div className="uyari basari" role="status">{bildirim}</div>}
 
-    {rota && <div className="rota-ozeti">
-      <div><span>Toplam mesafe</span><strong>{(rota.mesafeM / 1000).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} km</strong></div>
-      <div><span>Tahmini süre</span><strong>{sureMetni(rota.sureSn)}</strong></div>
+    {seciliRota && <div className={rota && rota.rotalar.length > 1 ? 'rota-secim-alani' : 'rota-ozeti'}>
+      {rota && rota.rotalar.length > 1 ? <div className="rota-kartlari" aria-label="Alternatif rotalar">
+        {rota.rotalar.map((secenek) => {
+          const sureFarki = anaRota && secenek.sira !== 0 ? sureFarkiMetni(secenek.sureSn - anaRota.sureSn) : null
+          const mesafeFarki = anaRota && secenek.sira !== 0 ? mesafeFarkiMetni(secenek.mesafeM - anaRota.mesafeM) : null
+          return <button key={secenek.sira} type="button" className={`rota-karti${secenek.sira === seciliRotaSirasi ? ' secili' : ''}`}
+            aria-pressed={secenek.sira === seciliRotaSirasi} onClick={() => rotaSec(secenek.sira)}>
+            <strong>{secenek.ad}</strong>
+            <span>{(secenek.mesafeM / 1000).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} km · {sureMetni(secenek.sureSn)}</span>
+            {(sureFarki || mesafeFarki) && <small>{[sureFarki, mesafeFarki].filter(Boolean).join(' · ')}</small>}
+          </button>
+        })}
+      </div> : <>
+        <div><span>Toplam mesafe</span><strong>{(seciliRota.mesafeM / 1000).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} km</strong></div>
+        <div><span>Tahmini süre</span><strong>{sureMetni(seciliRota.sureSn)}</strong></div>
+      </>}
       <div className="kaydet-alani">{kullanici
         ? <button type="button" onClick={() => void kaydet()} disabled={kaydediliyor}>{kaydediliyor ? 'Kaydediliyor…' : 'Rotayı kaydet'}</button>
         : <Link to="/giris">Rotayı kaydetmek için giriş yap</Link>}</div>
     </div>}
 
     <section className="sonuc-alani" aria-label="Rota ve yerler">
-      <div className="harita-kutusu"><RotaHaritasi rota={rota} kalkis={kalkis} varis={varis} seciliYer={seciliYer} /></div>
+      <div className="harita-kutusu"><RotaHaritasi rota={rota} seciliRota={seciliRota} rotaSec={rotaSec} kalkis={kalkis} varis={varis} seciliYer={seciliYer} /></div>
       <aside className="yer-paneli">
         <div className="panel-baslik"><h2>Yol üstünde</h2><span>{rota ? 'Rotandaki noktalar' : 'Önce bir rota oluştur'}</span></div>
         <div className="sekmeler" role="tablist" aria-label="Yer türü">
           {turler.map((tur) => <button key={tur.kimlik} type="button" role="tab" aria-selected={etkinTur === tur.kimlik}
             className={etkinTur === tur.kimlik ? 'etkin' : ''} onClick={() => etkinTurAyarla(tur.kimlik)}>
-            {tur.ad} <span>{rota?.yerler[tur.kimlik].length ?? 0}</span>
+            {tur.ad} <span>{seciliRota?.yerler[tur.kimlik].length ?? 0}</span>
           </button>)}
         </div>
         <div className="yer-listesi" role="tabpanel">
-          {!rota ? <p className="bos-metin">Seçtiğin rota boyunca keşfedilecek yerler burada görünecek.</p>
-            : rota.yerler[etkinTur].length === 0 ? <p className="bos-metin">Bu türde yer bulunamadı.</p>
-              : rota.yerler[etkinTur].map((yer) => <div className="yer-karti" key={yer.id}>
+          {!seciliRota ? <p className="bos-metin">Seçtiğin rota boyunca keşfedilecek yerler burada görünecek.</p>
+            : seciliRota.yerler[etkinTur].length === 0 ? <p className="bos-metin">Bu türde yer bulunamadı.</p>
+              : seciliRota.yerler[etkinTur].map((yer) => <div className="yer-karti" key={yer.id}>
                 <button type="button" className="yer-sec" onClick={() => seciliYerAyarla(yer)}>
                   <strong>{yer.ad}</strong><span>{kategoriAdi(yer.kategori)} · Yoldan {(yer.yolaUzaklikM / 1000).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} km</span>
                 </button>
