@@ -5,7 +5,7 @@ import { kategoriAdi } from '../api/kategoriler'
 import type { SiraliNokta } from '../rota/duraklar'
 import { gitBaglantisi, tumRotaBaglantisi } from '../rota/haritaBaglantilari'
 import { saatMetni } from '../rota/zamanCizelgesi'
-import { uyariMetni } from '../rota/acilisSaati'
+import { acilisSaatiYukle, uyariMetni } from '../rota/acilisSaati'
 
 interface YolculukPlani {
   noktalar: SiraliNokta[]
@@ -37,8 +37,16 @@ export function YolculukSayfasi() {
   const yonlendir = useNavigate()
   const [plan, planAyarla] = useState<YolculukPlani | null>(() => kayitliPlan())
   const [konum, konumAyarla] = useState<Pick<Konum, 'enlem' | 'boylam'> | null>(null)
+  const [, acilisSaatiSayaciAyarla] = useState(0)
   const siradaki = plan?.noktalar[plan.sira]
   const mesafe = siradaki && konum ? uzaklikMetre(konum, siradaki) : null
+
+  useEffect(() => {
+    if (!plan?.noktalar.some((nokta) => nokta.durak?.yer.calismaSaatleri?.trim())) return
+    let etkin = true
+    void acilisSaatiYukle().then(() => { if (etkin) acilisSaatiSayaciAyarla((sayi) => sayi + 1) })
+    return () => { etkin = false }
+  }, [plan])
 
   useEffect(() => {
     if (!navigator.geolocation || !siradaki) return

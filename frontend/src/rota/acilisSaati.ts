@@ -1,13 +1,26 @@
-import OpeningHours from 'opening_hours'
 import { saatMetni } from './zamanCizelgesi'
+
+type OpeningHoursSinifi = typeof import('opening_hours').default
+let acilisSaatiModulu: OpeningHoursSinifi | null = null
+const acilisSaatiYuklemeSozu = import('opening_hours').then((modul) => {
+  acilisSaatiModulu = modul.default
+})
+
+export function acilisSaatiHazir(): boolean {
+  return acilisSaatiModulu !== null
+}
+
+export async function acilisSaatiYukle(): Promise<void> {
+  await acilisSaatiYuklemeSozu
+}
 
 export type AcilisDurumu = 'acik' | 'kapali' | 'kalisSirasindaKapaniyor' | 'bilinmiyor'
 
 export function durum(calismaSaatleri: string | null | undefined, varis: Date, kalisDakika: number): { durum: AcilisDurumu; saat: string | null } {
   const bilinmiyor = { durum: 'bilinmiyor' as const, saat: null }
-  if (!calismaSaatleri?.trim() || !Number.isFinite(varis.getTime()) || !Number.isFinite(kalisDakika) || kalisDakika < 0) return bilinmiyor
+  if (!acilisSaatiModulu || !calismaSaatleri?.trim() || !Number.isFinite(varis.getTime()) || !Number.isFinite(kalisDakika) || kalisDakika < 0) return bilinmiyor
   try {
-    const saatler = new OpeningHours(calismaSaatleri)
+    const saatler = new acilisSaatiModulu(calismaSaatleri)
     if (saatler.getUnknown(varis)) return bilinmiyor
     const sonraki = saatler.getNextChange(varis)
     if (!saatler.getState(varis)) {
