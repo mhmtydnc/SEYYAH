@@ -15,7 +15,8 @@ public interface PlaceRepository extends JpaRepository<Place,Long> {
 
     WITH rota AS (
         -- ~50 m tolerans: yarıçap en az 100 m, sonuca etkisi yok ama nokta sayısı çok düşer.
-        -- SRID'siz WKT de kabul edilsin diye 4326 zorlanır.
+        -- SRID içermeyen WKT de kabul edilsin diye 4326 zorlanır.
+        -- DİKKAT: bu yorumlarda tek tırnak kullanma; Spring Data yorumları tanımaz, metin başlangıcı sanır.
         SELECT ST_SimplifyPreserveTopology(ST_SetSRID(ST_GeomFromEWKT(:wkt), 4326), 0.0005) AS hat
     ),
 
