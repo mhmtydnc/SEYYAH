@@ -90,6 +90,16 @@ h1 { font-size: clamp(30px, 4vw, 48px); letter-spacing: -.04em; line-height: 1.0
 .yer-detay-google { display: flex; flex-wrap: wrap; gap: 5px 8px; align-items: baseline; font-size: 14px; }
 .yer-detay-google > span:first-child { color: #b36c09; font-weight: 800; }
 .yer-detay-google a { flex-basis: 100%; }
+.yer-detay-aciklama small { display: block; margin-top: 5px; color: var(--soluk); font-size: 12px; }
+.yer-detay-yorumlar { width: 100%; min-width: 0; }
+.yer-detay-yorumlar h3 { margin: 3px 0 8px; font-size: 16px; }
+.yer-detay-yorum { border: 1px solid var(--kenar); border-radius: 9px; padding: 10px; margin-bottom: 8px; min-width: 0; }
+.yer-detay-yorum-ust { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 3px 8px; }
+.yer-detay-yorum-ust small { color: var(--soluk); }
+.yer-detay-yildiz { display: block; color: #b36c09; letter-spacing: 1px; }
+.yer-detay-yorum p { line-height: 1.45; white-space: pre-line; }
+.yer-detay-yorum-kisa { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
+.yer-detay-devami { border: 0; background: none; color: var(--lacivert); padding: 3px 0; font-weight: 700; }
 .yer-detay-icerigi > a { font-size: 14px; font-weight: 700; }
 .yer-detay-hata { color: #9f3a2e; font-size: 13px; }
 .yer-detay-iskelet { display: grid; gap: 12px; padding-top: 10px; }
@@ -148,6 +158,7 @@ h1 { font-size: clamp(30px, 4vw, 48px); letter-spacing: -.04em; line-height: 1.0
 .duraklarim li > div { display: flex; flex-direction: column; min-width: 0; }
 .duraklarim li strong { overflow-wrap: anywhere; }
 .duraklarim li small { color: var(--soluk); }
+.duraklarim li .acilis-uyarisi, .acilis-uyarisi { color: #9b5400; font-weight: 700; overflow-wrap: anywhere; }
 .duraklarim li label { font-size: 11px; }
 .duraklarim li input { padding: 5px; min-height: 34px; }
 .duraklarim li button, .durak-dugmesi { border: 1px solid var(--lacivert); border-radius: 7px; background: #fff; color: var(--lacivert); padding: 7px; font-weight: 700; }
@@ -173,6 +184,7 @@ h1 { font-size: clamp(30px, 4vw, 48px); letter-spacing: -.04em; line-height: 1.0
 .kalan-duraklar ol { margin: 0; padding-left: 25px; }
 .kalan-duraklar li { padding: 8px 0; border-top: 1px solid var(--kenar); }
 .kalan-duraklar li span { float: right; color: var(--soluk); }
+.kalan-duraklar li small { display: block; clear: both; }
 .tum-rota-baglantisi { display: block; text-align: center; padding: 12px; font-weight: 700; }
 .bitir-dugmesi { border-color: #cb745e; color: #a8422c; }
 

@@ -13,6 +13,7 @@ import { duraklariSirala, rotaNoktalari, type SeciliDurak } from '../rota/durakl
 import { varsayilanKalisSuresi } from '../rota/kalisSureleri'
 import { kalkisZamani, saatMetni, yuvarlanmisKalkis, zamanCizelgesi } from '../rota/zamanCizelgesi'
 import { sanalNoktalariBirlestir } from '../rota/yolculuk'
+import { acilisSaatiYukle, uyariMetni } from '../rota/acilisSaati'
 
 const turler: { kimlik: YerTuru; ad: string }[] = [
   { kimlik: 'gezi', ad: 'Gezi' }, { kimlik: 'mola', ad: 'Mola' }, { kimlik: 'destek', ad: 'Destek' },
@@ -48,6 +49,7 @@ export function AnaSayfa() {
   const [durakHatasi, durakHatasiAyarla] = useState('')
   const [durakYukleniyor, durakYukleniyorAyarla] = useState(false)
   const [kalkisSaati, kalkisSaatiAyarla] = useState(() => yuvarlanmisKalkis())
+  const [, acilisSaatiSayaciAyarla] = useState(0)
   const durakIstegi = useRef(0)
   const eklenmeSirasi = useRef(0)
   const istekSirasi = useRef(0)
@@ -62,6 +64,13 @@ export function AnaSayfa() {
   const bacaklar = durakliRota?.bacaklar ?? []
   const cizelge = zamanCizelgesi(kalkisZamani(kalkisSaati), planNoktalari, bacaklar)
   const toplamKalis = duraklar.reduce((toplam, durak) => toplam + durak.kalisDakika, 0)
+
+  useEffect(() => {
+    if (!duraklar.some((durak) => durak.yer.calismaSaatleri?.trim())) return
+    let etkin = true
+    void acilisSaatiYukle().then(() => { if (etkin) acilisSaatiSayaciAyarla((sayi) => sayi + 1) })
+    return () => { etkin = false }
+  }, [duraklar])
 
   function durakEklenebilir(yer: KoridorYeri): boolean {
     if (duraklar.some((durak) => durak.yer.id === yer.id)) return true
@@ -282,9 +291,11 @@ export function AnaSayfa() {
           <label className="kalkis-saati">Kalkış saati <input type="time" value={kalkisSaati} onChange={(olay) => kalkisSaatiAyarla(olay.target.value)} /></label>
           <ol>{siraliNoktalar.filter((nokta) => nokta.durak).map((nokta, sira) => {
             const zaman = cizelge.find((satir) => satir.nokta === nokta)?.varis
+            const uyari = durakliRota && zaman ? uyariMetni(nokta.durak!.yer.calismaSaatleri, zaman, nokta.durak!.kalisDakika) : null
             return <li key={nokta.durak!.yer.id}>
               <div><strong>{sira + 1}. {nokta.ad}</strong><small>Varış: {durakliRota && zaman ? saatMetni(zaman) : 'Hesaplanıyor…'}</small>
-                {nokta.durak!.yer.calismaSaatleri && <small>Çalışma saatleri: {nokta.durak!.yer.calismaSaatleri}</small>}</div>
+                {nokta.durak!.yer.calismaSaatleri && <small>Çalışma saatleri: {nokta.durak!.yer.calismaSaatleri}</small>}
+                {uyari && <small className="acilis-uyarisi">{uyari}</small>}</div>
               <label>Kalış (dk)<input type="number" min="0" max="1440" value={nokta.durak!.kalisDakika}
                 onChange={(olay) => duraklarAyarla((eskiler) => eskiler.map((durak) => durak.yer.id === nokta.durak!.yer.id
                   ? { ...durak, kalisDakika: Math.max(0, Math.min(1440, Number(olay.target.value) || 0)) } : durak))} /></label>

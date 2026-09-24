@@ -107,3 +107,15 @@ Hatalar: 400 geçersiz parametre, 404 rota bulunamadı, 503 kota doldu, 502/504 
 - `google`: anahtar tanımlı değilse, aylık kota dolduysa, eşleşme bulunamadıysa ya da hata olursa `null`.
 - Önbellek sunucu tarafında: Wikidata 30 gün, Google puanı en fazla 30 gün (Google kuralı), `place_id` süresiz.
 - Arayüz Google puanını gösterirken yanında "Google" atfı, görselin altında yazar ve lisans gösterir (zorunlu).
+
+### Aşama 8 eklemeleri (yer detayı)
+```json
+{ "ozet": { "metin": "Ankara'nın Çankaya ilçesinde yer alan Anıtkabir, ...", "vikipedi": "https://tr.wikipedia.org/wiki/An%C4%B1tkabir" },
+  "google": { "puan": 4.9, "yorumSayisi": 144235, "haritaBaglantisi": "https://maps.google.com/?cid=...",
+    "yorumlar": [ { "yazar": "Ayşe K.", "yazarBaglantisi": "https://www.google.com/maps/contrib/...",
+                    "puan": 5, "metin": "...", "zaman": "2 ay önce" } ] } }
+```
+- `ozet`: Vikipedi giriş metninden Gemini ile üretilmiş 2–3 cümlelik Türkçe tanıtım; Vikipedi yoksa, metin çok kısaysa ya da
+  üretilemediyse `null`. Arayüz altına "Yapay zekâ ile Vikipedi'den özetlendi" ve Vikipedi bağlantısını yazar.
+- `google.yorumlar`: en fazla 3 yorum (Google'ın döndürdüğü sırayla); yoksa `[]`. Arayüz yazar adını bağlantısıyla ve
+  "Google" atfıyla gösterir.

@@ -47,7 +47,15 @@ public class GooglePuanServisiTest {
                       "rating": 4.5,
                       "userRatingCount": 100,
                       "googleMapsUri": "http://maps",
-                      "location": { "latitude": 39.0, "longitude": 35.0 }
+                      "location": { "latitude": 39.0, "longitude": 35.0 },
+                      "reviews": [
+                        {
+                          "authorAttribution": { "displayName": "Ahmet", "uri": "http://ahmet" },
+                          "rating": 5,
+                          "text": { "text": "Çok güzel bir yer." },
+                          "relativePublishTimeDescription": "2 ay önce"
+                        }
+                      ]
                     }
                   ]
                 }
@@ -63,5 +71,7 @@ public class GooglePuanServisiTest {
         assertThat(yanit).isNotNull();
         assertThat(yanit.placeId()).isEqualTo("ChIJtest");
         assertThat(yanit.detay().puan()).isEqualTo(4.5);
+        assertThat(yanit.detay().yorumlar()).hasSize(1);
+        assertThat(yanit.detay().yorumlar().get(0).yazar()).isEqualTo("Ahmet");
     }
 }
