@@ -13,8 +13,10 @@ spring:
       pem:
         seyyah:
           reload-on-update: true
-          certificate: file:C:/seyyah/sertifika/${seyyah.alan-adi}-chain.pem
-          private-key: file:C:/seyyah/sertifika/${seyyah.alan-adi}-key.pem
+          # keystore seviyesi şart: yoksa bundle boş kalır ve Tomcat varsayılan ~/.keystore'u arar
+          keystore:
+            certificate: file:C:/seyyah/sertifika/${seyyah.alan-adi}-chain.pem
+            private-key: file:C:/seyyah/sertifika/${seyyah.alan-adi}-key.pem
 
 server:
   port: 443
