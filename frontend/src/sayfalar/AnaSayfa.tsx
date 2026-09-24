@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api/istemci'
+import { guvenliSite } from '../api/baglanti'
 import { kategoriAdi } from '../api/kategoriler'
 import type { DurakliRota, KayitliRota, Konum, KoridorYeri, RotaYaniti, YerTuru } from '../api/tipler'
 import { KonumAlani } from '../bilesenler/KonumAlani'
+import { YerDetayi } from '../bilesenler/YerDetayi'
 import { RotaHaritasi } from '../harita/RotaHaritasi'
 import { useOturum } from '../oturum/Oturum'
 import { mesafeFarkiMetni, sureFarkiMetni, sureMetni } from './rotaBicimi'
@@ -26,16 +28,6 @@ function sorgudanKonum(parametreler: URLSearchParams, onEk: string): Konum | nul
   return { ad, enlem, boylam }
 }
 
-function guvenliSite(adres: string | null) {
-  if (!adres) return null
-  try {
-    const baglanti = new URL(adres)
-    return ['http:', 'https:'].includes(baglanti.protocol) ? baglanti.href : null
-  } catch {
-    return null
-  }
-}
-
 export function AnaSayfa() {
   const yonlendir = useNavigate()
   const { kullanici } = useOturum()
@@ -46,6 +38,7 @@ export function AnaSayfa() {
   const [seciliRotaSirasi, seciliRotaSirasiAyarla] = useState(0)
   const [etkinTur, etkinTurAyarla] = useState<YerTuru>('gezi')
   const [seciliYer, seciliYerAyarla] = useState<KoridorYeri | null>(null)
+  const [detayYeri, detayYeriAyarla] = useState<KoridorYeri | null>(null)
   const [yukleniyor, yukleniyorAyarla] = useState(false)
   const [kaydediliyor, kaydediliyorAyarla] = useState(false)
   const [hata, hataAyarla] = useState('')
@@ -59,6 +52,8 @@ export function AnaSayfa() {
   const eklenmeSirasi = useRef(0)
   const istekSirasi = useRef(0)
   const ilkSorguYapildi = useRef(false)
+  const haritaKutusu = useRef<HTMLDivElement>(null)
+  const listeSayfaKonumu = useRef(0)
   const seciliRota = rota?.rotalar.find((secenek) => secenek.sira === seciliRotaSirasi) ?? null
   const anaRota = rota?.rotalar.find((secenek) => secenek.sira === 0) ?? null
   const siraliNoktalar = useMemo(() => seciliRota ? duraklariSirala(duraklar, seciliRota) : [], [duraklar, seciliRota])
@@ -106,6 +101,19 @@ export function AnaSayfa() {
   function rotaSec(sira: number) {
     seciliRotaSirasiAyarla(sira)
     seciliYerAyarla(null)
+    detayYeriAyarla(null)
+  }
+
+  function detayiAc(yer: KoridorYeri) {
+    if (!detayYeri) listeSayfaKonumu.current = window.scrollY
+    seciliYerAyarla(yer)
+    detayYeriAyarla(yer)
+    if (window.innerWidth < 768) haritaKutusu.current?.scrollIntoView({ block: 'start' })
+  }
+
+  function detayiKapat() {
+    detayYeriAyarla(null)
+    if (window.innerWidth < 768) window.requestAnimationFrame(() => window.scrollTo(0, listeSayfaKonumu.current))
   }
 
   async function rotaGetir(baslangic: Konum, bitis: Konum, yaricapM: number, kayit?: KayitliRota) {
@@ -116,6 +124,7 @@ export function AnaSayfa() {
     rotaAyarla(null)
     seciliRotaSirasiAyarla(0)
     seciliYerAyarla(null)
+    detayYeriAyarla(null)
     try {
       const gelen = await api.rotaOlustur(baslangic, bitis, yaricapM)
       if (sira === istekSirasi.current) {
@@ -170,6 +179,7 @@ export function AnaSayfa() {
     rotaAyarla(null)
     seciliRotaSirasiAyarla(0)
     seciliYerAyarla(null)
+    detayYeriAyarla(null)
     duraklarAyarla([])
     bildirimAyarla('')
   }
@@ -259,9 +269,13 @@ export function AnaSayfa() {
     </section>}
 
     <section className="sonuc-alani" aria-label="Rota ve yerler">
-      <div className="harita-kutusu"><RotaHaritasi rota={rota} seciliRota={seciliRota} rotaSec={rotaSec} kalkis={kalkis} varis={varis} seciliYer={seciliYer}
+      <div className="harita-kutusu" ref={haritaKutusu}><RotaHaritasi rota={rota} seciliRota={seciliRota} rotaSec={rotaSec} kalkis={kalkis} varis={varis} seciliYer={seciliYer} detayiAc={detayiAc}
         durakliRota={durakliRota} siraliDuraklar={haritaDuraklari} duraklar={duraklar} durakDegistir={durakDegistir} durakEklenebilir={durakEklenebilir} /></div>
-      <aside className="yer-paneli">
+      <aside className={`yer-paneli${detayYeri ? ' detay-acik' : ''}`}>
+        {detayYeri && <YerDetayi key={detayYeri.id} yer={detayYeri} kapat={detayiKapat}
+          durakMi={duraklar.some((durak) => durak.yer.id === detayYeri.id)} eklenebilir={durakEklenebilir(detayYeri)}
+          durakDegistir={() => durakDegistir(detayYeri)} />}
+        <div className="yer-panel-liste" hidden={!!detayYeri}>
         <div className="panel-baslik"><h2>Yol üstünde</h2><span>{rota ? 'Rotandaki noktalar' : 'Önce bir rota oluştur'}</span></div>
         {duraklar.length > 0 && <section className="duraklarim" aria-label="Duraklarım">
           <h3>Duraklarım</h3>
@@ -289,7 +303,7 @@ export function AnaSayfa() {
           {!seciliRota ? <p className="bos-metin">Seçtiğin rota boyunca keşfedilecek yerler burada görünecek.</p>
             : seciliRota.yerler[etkinTur].length === 0 ? <p className="bos-metin">Bu türde yer bulunamadı.</p>
               : seciliRota.yerler[etkinTur].map((yer) => <div className="yer-karti" key={yer.id}>
-                <button type="button" className="yer-sec" onClick={() => seciliYerAyarla(yer)}>
+                <button type="button" className="yer-sec" onClick={() => detayiAc(yer)}>
                   <strong>{yer.ad}</strong><span>{kategoriAdi(yer.kategori)} · Yoldan {(yer.yolaUzaklikM / 1000).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} km</span>
                 </button>
                 {yer.calismaSaatleri && <small>Çalışma saatleri: {yer.calismaSaatleri}</small>}
@@ -298,6 +312,7 @@ export function AnaSayfa() {
                 <button type="button" className="durak-dugmesi" disabled={!durakEklenebilir(yer)}
                   onClick={() => durakDegistir(yer)}>{duraklar.some((durak) => durak.yer.id === yer.id) ? 'Duraktan çıkar' : '+ Durak ekle'}</button>
               </div>)}
+        </div>
         </div>
       </aside>
     </section>
