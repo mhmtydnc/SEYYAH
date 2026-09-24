@@ -5,8 +5,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.util.UriUtils;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -91,9 +93,18 @@ public class WikidataServisi {
 
     private GorselDetay gorselGetir(String fileName) {
         try {
-            String url = "https://commons.wikimedia.org/w/api.php?action=query&titles=File:" +
-                    UriUtils.encodeQueryParam(fileName, StandardCharsets.UTF_8) +
-                    "&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=640&format=json";
+            // URI hazır nesne olarak verilir: uri(String) metni şablon sayıp yeniden kodluyordu (% -> %25),
+            // boşluklu ya da Türkçe karakterli dosya adları Commons'ta bulunamıyor ve görsel sessizce kayboluyordu
+            URI url = UriComponentsBuilder.fromUriString("https://commons.wikimedia.org/w/api.php")
+                    .queryParam("action", "query")
+                    .queryParam("titles", "File:" + fileName)
+                    .queryParam("prop", "imageinfo")
+                    .queryParam("iiprop", "url|extmetadata")
+                    .queryParam("iiurlwidth", 640)
+                    .queryParam("format", "json")
+                    .encode()
+                    .build()
+                    .toUri();
 
             Map<String, Object> response = restClient.get()
                     .uri(url)

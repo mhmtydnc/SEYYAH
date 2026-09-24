@@ -29,7 +29,7 @@ public class WikidataServisiTest {
                       "sitelinks": { "trwiki": { "title": "Test_Sayfa" } },
                       "claims": {
                         "P18": [
-                          { "mainsnak": { "datavalue": { "value": "test.jpg" } } }
+                          { "mainsnak": { "datavalue": { "value": "Anıtkabir görünüm.jpg" } } }
                         ]
                       }
                     }
@@ -61,7 +61,7 @@ public class WikidataServisiTest {
         server.expect(requestTo("https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q1&props=descriptions%7Cclaims%7Csitelinks&languages=tr%7Cen&format=json"))
                 .andRespond(withSuccess(wRes, MediaType.APPLICATION_JSON));
                 
-        server.expect(requestTo("https://commons.wikimedia.org/w/api.php?action=query&titles=File:test.jpg&prop=imageinfo&iiprop=url%7Cextmetadata&iiurlwidth=640&format=json"))
+        server.expect(requestTo("https://commons.wikimedia.org/w/api.php?action=query&titles=File:An%C4%B1tkabir%20g%C3%B6r%C3%BCn%C3%BCm.jpg&prop=imageinfo&iiprop=url%7Cextmetadata&iiurlwidth=640&format=json"))
                 .andRespond(withSuccess(cRes, MediaType.APPLICATION_JSON));
 
         WikidataDetay detay = wikidataServisi.detayGetir("Q1");
