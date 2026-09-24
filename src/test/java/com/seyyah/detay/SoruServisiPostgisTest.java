@@ -40,6 +40,8 @@ public class SoruServisiPostgisTest extends PostgisTestDestegi {
     @MockBean
     private GeminiIstemcisi geminiIstemcisi;
 
+    private Long yerId;
+
     @BeforeEach
     void setup() {
         placeRepository.deleteAll();
@@ -53,7 +55,8 @@ public class SoruServisiPostgisTest extends PostgisTestDestegi {
         p.setKonum(gf.createPoint(new Coordinate(32.8, 39.9)));
         p.setCalismaSaatleri("09:00-17:00");
         p.setOnemSkoru(1);
-        p = placeRepository.save(p);
+        // Paylaşılan test veritabanında dizi 1'den başlamaz; kimlik sabit yazılamaz
+        yerId = placeRepository.save(p).getId();
     }
 
     @Test
@@ -61,11 +64,11 @@ public class SoruServisiPostgisTest extends PostgisTestDestegi {
         when(geminiIstemcisi.etkin()).thenReturn(true);
         when(geminiIstemcisi.icerikUret(any(), any())).thenReturn("Görülmeye değer.");
         
-        SoruYaniti y1 = soruServisi.hazirSoru(1L, "deger");
+        SoruYaniti y1 = soruServisi.hazirSoru(yerId, "deger");
         assertEquals("Görülmeye değer.", y1.cevap());
         assertFalse(y1.onbellekten());
         
-        SoruYaniti y2 = soruServisi.hazirSoru(1L, "deger");
+        SoruYaniti y2 = soruServisi.hazirSoru(yerId, "deger");
         assertEquals("Görülmeye değer.", y2.cevap());
         assertTrue(y2.onbellekten());
         
@@ -78,12 +81,12 @@ public class SoruServisiPostgisTest extends PostgisTestDestegi {
         when(geminiIstemcisi.icerikUret(any(), any())).thenReturn("Evet.");
         
         for (int i = 0; i < 10; i++) {
-            SoruYaniti y = soruServisi.serbestSoru(1L, "Güzel mi?", 500L);
+            SoruYaniti y = soruServisi.serbestSoru(yerId, "Güzel mi?", 500L);
             assertNotNull(y.cevap());
         }
         
         ApiIstisnasi ex = assertThrows(ApiIstisnasi.class, () -> {
-            soruServisi.serbestSoru(1L, "Güzel mi?", 500L);
+            soruServisi.serbestSoru(yerId, "Güzel mi?", 500L);
         });
         assertEquals(429, ex.getStatus().value());
     }
