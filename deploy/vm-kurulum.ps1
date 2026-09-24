@@ -41,13 +41,12 @@ try {
         if (Get-Command winget -ErrorAction SilentlyContinue) {
             Calistir 'winget' @('install', '--id', 'EclipseAdoptium.Temurin.21.JDK', '-e', '--silent', '--accept-package-agreements', '--accept-source-agreements')
         } else {
-            $msi = Join-Path $env:TEMP 'temurin-21.msi'
-            Indir 'https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jdk/hotspot/normal/eclipse' $msi
-            # msiexec GUI alt sistemi: & ile çağrılınca beklenmez ve LASTEXITCODE boş kalır
-            $log = Join-Path $env:TEMP 'temurin-kurulum.log'
-            $islem = Start-Process msiexec.exe -Wait -PassThru -ArgumentList @('/i', "`"$msi`"", '/qn', '/norestart', '/l*v', "`"$log`"", 'ADDLOCAL=FeatureMain,FeatureEnvironment,FeatureJavaHome')
-            # 3010: kurulum tamam, yeniden başlatma önerilir
-            if ($islem.ExitCode -notin 0, 3010) { throw "JDK MSI cikis kodu: $($islem.ExitCode) (log: $log)" }
+            # Adoptium "binary" ucu Windows için ZIP döndürür; açmak MSI kurmaktan daha az hata noktası içerir
+            $zip = Join-Path $env:TEMP 'temurin-21.zip'
+            Indir 'https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jdk/hotspot/normal/eclipse' $zip
+            New-Item -ItemType Directory -Path 'C:\Program Files\Eclipse Adoptium' -Force | Out-Null
+            Expand-Archive -LiteralPath $zip -DestinationPath 'C:\Program Files\Eclipse Adoptium' -Force
+            Remove-Item -LiteralPath $zip -Force
         }
         $java = Get-ChildItem 'C:\Program Files\Eclipse Adoptium' -Filter java.exe -Recurse -ErrorAction SilentlyContinue |
             Where-Object { $_.FullName -match 'jdk-21[^\\]*\\bin\\java.exe$' } | Select-Object -First 1
