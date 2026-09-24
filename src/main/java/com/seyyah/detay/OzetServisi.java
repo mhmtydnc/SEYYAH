@@ -36,8 +36,13 @@ public class OzetServisi {
         this.model = model;
     }
 
+    // Anahtar yoksa servis kapalıdır; çağıran bunu "özet yok" sanıp süresiz önbelleğe yazmamalı
+    public boolean etkin() {
+        return apiKey != null && !apiKey.isBlank();
+    }
+
     public OzetDetay ozetUret(WikidataDetay wikidata) {
-        if (apiKey == null || apiKey.isBlank()) {
+        if (!etkin()) {
             return null;
         }
         if (wikidata == null || wikidata.vikipedi() == null || wikidata.vikipedi().isBlank()) {

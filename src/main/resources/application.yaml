@@ -48,3 +48,7 @@ management:
 google:
   places:
     anahtar: ${GOOGLE_PLACES_API_KEY:}
+
+gemini:
+  anahtar: ${GEMINI_API_KEY:}
+  model: gemini-flash-lite-latest

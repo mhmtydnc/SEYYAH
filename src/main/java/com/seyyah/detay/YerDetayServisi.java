@@ -94,7 +94,9 @@ public class YerDetayServisi {
             wikidataGuncelle = false;
         }
 
-        if (ozetGuncelle && wikidata != null) {
+        if (!ozetServisi.etkin()) {
+            ozetGuncelle = false; // Anahtar tanımlı değil: "özet yok" diye önbelleğe yazılmasın, anahtar gelince üretilsin
+        } else if (ozetGuncelle && wikidata != null) {
             try {
                 ozet = ozetServisi.ozetUret(wikidata);
                 ozetBasarili = true; // No error thrown, we can save the state (either null or result)
