@@ -129,29 +129,34 @@ function YorumKarti({ yorum }: { yorum: NonNullable<NonNullable<YerDetayiTipi['g
   </article>
 }
 
-export function YerDetayiIcerigi({ yer, detay, hata, durakMi, eklenebilir, durakDegistir, girisYapilmis = false }: {
+export function YerDetayiIcerigi({ yer, detay, hata, yukleniyor = false, durakMi, eklenebilir, durakDegistir, girisYapilmis = false }: {
   yer: KoridorYeri; detay: YerDetayiTipi | null; hata: boolean; durakMi: boolean
-  eklenebilir: boolean; durakDegistir: () => void; girisYapilmis?: boolean
+  eklenebilir: boolean; durakDegistir: () => void; girisYapilmis?: boolean; yukleniyor?: boolean
 }) {
   const gorsel = detay?.wikidata?.gorsel
   const google = detay?.google
   const site = guvenliSite(detay?.website ?? yer.website)
   const vikipedi = guvenliSite(detay?.wikidata?.vikipedi)
-  const gorselUrl = guvenliSite(gorsel?.url)
+  const gorselUrl = guvenliSite(gorsel?.url) ?? guvenliSite(yer.gorselUrl)
   const gorselSayfasi = guvenliSite(gorsel?.sayfa)
   const haritaBaglantisi = guvenliSite(google?.haritaBaglantisi)
   const ozetBaglantisi = guvenliSite(detay?.ozet?.vikipedi)
   return <div className="yer-detay-icerigi">
     {hata && <p className="yer-detay-hata" role="alert">Yer detayı alınamadı. Bilinen bilgiler gösteriliyor.</p>}
-    {gorsel && gorselUrl && <figure className="yer-detay-gorsel">
-      <img src={gorselUrl} alt={detay?.ad ?? yer.ad} loading="lazy" />
-      {(gorsel.yazar || gorsel.lisans) && <figcaption>
+    {gorselUrl ? <figure className="yer-detay-gorsel">
+      <img src={gorselUrl} alt={yer.ad} loading="lazy" />
+      {gorsel && (gorsel.yazar || gorsel.lisans) && <figcaption>
         {gorselSayfasi ? <a href={gorselSayfasi} target="_blank" rel="noopener noreferrer">Fotoğraf: {[gorsel.yazar, gorsel.lisans].filter(Boolean).join(' · ')}</a>
           : <>Fotoğraf: {[gorsel.yazar, gorsel.lisans].filter(Boolean).join(' · ')}</>}
       </figcaption>}
-    </figure>}
-    <h2>{detay?.ad ?? yer.ad}</h2>
-    <p className="yer-detay-ozet">{kategoriAdi(detay?.kategori ?? yer.kategori)} · Yoldan {(yer.yolaUzaklikM / 1000).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} km</p>
+    </figure> : yukleniyor && <div className="yer-detay-iskelet gorsel" role="status" aria-label="Görsel yükleniyor"><div /></div>}
+    <h2>{yer.ad}</h2>
+    <p className="yer-detay-ozet">{kategoriAdi(yer.kategori)} · Yoldan {(yer.yolaUzaklikM / 1000).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} km</p>
+    {yer.calismaSaatleri && <p><strong>Çalışma saatleri:</strong> {yer.calismaSaatleri}</p>}
+    {yer.ucret != null && <p><strong>Ücret:</strong> {yer.ucret}</p>}
+    {guvenliSite(yer.website) && <a href={guvenliSite(yer.website)!} target="_blank" rel="noopener noreferrer">Web sitesi ↗</a>}
+    <button type="button" className="durak-dugmesi" disabled={!eklenebilir} onClick={durakDegistir}>{durakMi ? 'Duraktan çıkar' : '+ Durak ekle'}</button>
+    {yukleniyor && <div className="yer-detay-iskelet satir" role="status" aria-label="Google puanı yükleniyor"><div /></div>}
     {google && <div className="yer-detay-google">
       <span aria-label="Puan">★ {google.puan.toLocaleString('tr-TR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
       <span>({google.yorumSayisi.toLocaleString('tr-TR')} değerlendirme)</span>
@@ -162,21 +167,22 @@ export function YerDetayiIcerigi({ yer, detay, hata, durakMi, eklenebilir, durak
       <h3>Google yorumları</h3>
       {google.yorumlar.slice(0, 3).map((yorum, sira) => <YorumKarti key={`${yorum.yazar}-${sira}`} yorum={yorum} />)}
     </section>}
+    {yukleniyor && <div className="yer-detay-iskelet satir" role="status" aria-label="Özet yükleniyor"><div /><div /></div>}
     {detay?.ozet ? <div className="yer-detay-aciklama">
       <p>{detay.ozet.metin}</p>
       <small>Yapay zekâ ile Vikipedi'den özetlendi{ozetBaglantisi && <> · <a href={ozetBaglantisi} target="_blank" rel="noopener noreferrer">Vikipedi</a></>}</small>
     </div> : detay?.wikidata?.aciklama && <p className="yer-detay-aciklama">{ilkHarfBuyuk(detay.wikidata.aciklama)}</p>}
-    <YerSorulari key={yer.id} yerKimligi={yer.id} girisYapilmis={girisYapilmis} />
-    {(detay?.calismaSaatleri ?? yer.calismaSaatleri) && <p><strong>Çalışma saatleri:</strong> {detay?.calismaSaatleri ?? yer.calismaSaatleri}</p>}
-    {(detay?.ucret ?? yer.ucret) != null && <p><strong>Ücret:</strong> {detay?.ucret ?? yer.ucret}</p>}
-    {site && <a href={site} target="_blank" rel="noopener noreferrer">Web sitesi ↗</a>}
+    {yukleniyor ? <div className="yer-detay-iskelet satir" role="status" aria-label="Sorular yükleniyor"><div /><div /></div>
+      : <YerSorulari key={yer.id} yerKimligi={yer.id} girisYapilmis={girisYapilmis} />}
+    {!yer.calismaSaatleri && detay?.calismaSaatleri && <p><strong>Çalışma saatleri:</strong> {detay.calismaSaatleri}</p>}
+    {yer.ucret == null && detay?.ucret != null && <p><strong>Ücret:</strong> {detay.ucret}</p>}
+    {!guvenliSite(yer.website) && site && <a href={site} target="_blank" rel="noopener noreferrer">Web sitesi ↗</a>}
     {vikipedi && <a href={vikipedi} target="_blank" rel="noopener noreferrer">Vikipedi'de oku ↗</a>}
-    <button type="button" className="durak-dugmesi" disabled={!eklenebilir} onClick={durakDegistir}>{durakMi ? 'Duraktan çıkar' : '+ Durak ekle'}</button>
   </div>
 }
 
-export function YerDetayi({ yer, durakMi, eklenebilir, durakDegistir, kapat }: {
-  yer: KoridorYeri; durakMi: boolean; eklenebilir: boolean; durakDegistir: () => void; kapat: () => void
+export function YerDetayi({ yer, durakMi, eklenebilir, durakDegistir }: {
+  yer: KoridorYeri; durakMi: boolean; eklenebilir: boolean; durakDegistir: () => void
 }) {
   const { kullanici } = useOturum()
   const [detay, detayAyarla] = useState<YerDetayiTipi | null>(null)
@@ -190,12 +196,7 @@ export function YerDetayi({ yer, durakMi, eklenebilir, durakDegistir, kapat }: {
     return () => { gecerli = false }
   }, [yer.id])
   return <section id="yer-detayi" className="yer-detayi" aria-label={`${yer.ad} detayı`}>
-    <div className="yer-detay-ust">
-      <button type="button" className="listeye-don" onClick={kapat}>← Listeye dön</button>
-      <button type="button" className="detay-kapat" onClick={kapat} aria-label="Detayı kapat"><span /></button>
-    </div>
-    {yukleniyor ? <div className="yer-detay-iskelet" role="status" aria-label="Yer detayı yükleniyor">
-      <div /><div /><div /><div />
-    </div> : <YerDetayiIcerigi yer={yer} detay={detay} hata={hata} durakMi={durakMi} eklenebilir={eklenebilir} durakDegistir={durakDegistir} girisYapilmis={!!kullanici} />}
+    <YerDetayiIcerigi yer={yer} detay={detay} hata={hata} yukleniyor={yukleniyor} durakMi={durakMi}
+      eklenebilir={eklenebilir} durakDegistir={durakDegistir} girisYapilmis={!!kullanici} />
   </section>
 }

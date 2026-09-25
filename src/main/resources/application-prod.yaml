@@ -35,3 +35,6 @@ seyyah:
   http-yonlendirme:
     port: 80
   acme-dizini: C:/seyyah/acme
+  # Wikidata görsellerini arka planda önceden çeker (dakikada 20 yer)
+  gorsel-isitici:
+    etkin: true

@@ -9,8 +9,8 @@ const rota: Rota = {
   sira: 1, ad: 'Aksaray üzerinden', uzerinden: 'Aksaray', araNokta: { ad: 'Aksaray', enlem: 0, boylam: 5 },
   mesafeM: 100, sureSn: 100, geometri: [[0, 0], [10, 0]],
   yerler: { gezi: [
-    { id: 1, ad: 'Bir', kategori: 'museum', tur: 'gezi', enlem: 0, boylam: 8, yolOrani: 0.8, yolaUzaklikM: 0, ucret: null, calismaSaatleri: null, wikidataId: null, website: null },
-    { id: 2, ad: 'İki', kategori: 'park', tur: 'gezi', enlem: 0, boylam: 2, yolOrani: 0.2, yolaUzaklikM: 0, ucret: null, calismaSaatleri: null, wikidataId: null, website: null },
+    { id: 1, ad: 'Bir', kategori: 'museum', tur: 'gezi', enlem: 0, boylam: 8, yolOrani: 0.8, yolaUzaklikM: 0, ucret: null, calismaSaatleri: null, wikidataId: null, website: null, gorselUrl: null },
+    { id: 2, ad: 'İki', kategori: 'park', tur: 'gezi', enlem: 0, boylam: 2, yolOrani: 0.2, yolaUzaklikM: 0, ucret: null, calismaSaatleri: null, wikidataId: null, website: null, gorselUrl: null },
   ], mola: [], destek: [] },
 }
 const duraklar: SeciliDurak[] = [
