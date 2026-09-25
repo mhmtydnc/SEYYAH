@@ -4,14 +4,15 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { api, IstekHatasi } from '../api/istemci'
 import type { KoridorYeri, YerDetayi as YerDetayiTipi } from '../api/tipler'
-import { YerDetayiIcerigi, YerSorulari } from './YerDetayi'
+import { OturumSaglayici } from '../oturum/Oturum'
+import { YerDetayi, YerDetayiIcerigi, YerSorulari } from './YerDetayi'
 
 afterEach(cleanup)
 
 const yer: KoridorYeri = {
   id: 118, ad: 'Kırşehir Kalesi', kategori: 'castle', tur: 'gezi', enlem: 39.14, boylam: 34.16,
   yolaUzaklikM: 1200, yolOrani: 0.5, ucret: 'Ücretsiz', calismaSaatleri: '09:00-17:00',
-  wikidataId: null, website: 'https://ornek.com',
+  wikidataId: null, website: 'https://ornek.com', gorselUrl: null,
 }
 
 function ciz(detay: YerDetayiTipi | null) {
@@ -20,6 +21,24 @@ function ciz(detay: YerDetayiTipi | null) {
 }
 
 describe('Yer detayı koşullu bölümleri', () => {
+  it('detay isteği bitmeden bilinen bilgileri ve liste görselini gösterir', () => {
+    vi.spyOn(api, 'yerDetayi').mockImplementation(() => new Promise(() => {}))
+    render(<OturumSaglayici><YerDetayi yer={{ ...yer, id: 119, gorselUrl: 'https://upload.wikimedia.org/foto.jpg' }}
+      durakMi={false} eklenebilir durakDegistir={() => {}} /></OturumSaglayici>)
+    expect(screen.getByRole('heading', { name: 'Kırşehir Kalesi' })).toBeTruthy()
+    expect(screen.getByText('09:00-17:00')).toBeTruthy()
+    expect(screen.getByText(/Kale · Yoldan/)).toBeTruthy()
+    expect(screen.getByRole('img', { name: 'Kırşehir Kalesi' }).getAttribute('src')).toBe('https://upload.wikimedia.org/foto.jpg')
+  })
+  it('istek sürerken bilinen alanları ve hazır görseli gösterir', () => {
+    const html = renderToStaticMarkup(<YerDetayiIcerigi yer={{ ...yer, gorselUrl: 'https://upload.wikimedia.org/foto.jpg' }}
+      detay={null} hata={false} yukleniyor durakMi={false} eklenebilir durakDegistir={() => {}} />)
+    expect(html).toContain('Kırşehir Kalesi')
+    expect(html).toContain('Kale')
+    expect(html).toContain('09:00-17:00')
+    expect(html).toContain('https://upload.wikimedia.org/foto.jpg')
+    expect(html).toContain('Sorular yükleniyor')
+  })
   it('özet varken eski açıklamayı gizler', () => {
     const html = ciz({ ...yer, ozet: { metin: 'Yeni özet metni', vikipedi: 'https://tr.wikipedia.org/wiki/Kale' },
       wikidata: { aciklama: 'Eski açıklama', vikipedi: null, gorsel: null }, google: null })
