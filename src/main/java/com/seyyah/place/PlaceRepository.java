@@ -65,9 +65,11 @@ public interface PlaceRepository extends JpaRepository<Place,Long> {
         s.ucret,
         s.calisma_saatleri             AS "calismaSaatleri",
         s.wikidata_id                  AS "wikidataId",
-        s.website
+        s.website,
+        o.wikidata -> 'gorsel' ->> 'url' AS "gorselUrl"
     FROM secilen s
     CROSS JOIN rota
+    LEFT JOIN yer_detay_onbellek o ON o.yer_id = s.id
     ORDER BY "yolOrani"
 
 """, nativeQuery = true)

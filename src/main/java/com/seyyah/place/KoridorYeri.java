@@ -14,5 +14,7 @@ public interface KoridorYeri {
     String getCalismaSaatleri();
     String getWikidataId();
     String getWebsite();
+    // Önbellekteki Wikidata görseli; henüz çekilmemişse null
+    String getGorselUrl();
 
 }
