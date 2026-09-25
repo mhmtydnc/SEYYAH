@@ -135,3 +135,11 @@ Her ikisinin yanıtı: `{ "cevap": "3-4 cümlelik Türkçe yanıt", "onbellekten
   yanıt yalnızca bu bilgilere dayanır, bilgi yoksa bunu söyler, yerle ilgisiz soruyu kibarca geri çevirir.
 
 **Aşama 9'da kaldırılan:** Google yorumları (hesapta veri dönmüyor; `reviews` alanı istekten çıkarıldı, `google.yorumlar` her zaman `[]`).
+
+## Aşama 10: fotoğraflar önceden hazır, detay sekmesi
+- `KoridorYeri`'ne `"gorselUrl": "https://upload.wikimedia.org/...jpg"` (yoksa `null`) eklendi. Değer, yerin önbellekteki
+  Wikidata görselidir. Sunucuda yavaş bir arka plan görevi Wikidata kaydı olan yerlerin görsel ve açıklamasını önceden
+  çeker; henüz işlenmemiş yerlerde `null` olabilir, detay açılınca yine çekilir.
+- Arayüz: harita açılır kutusunda görsel (varsa) + ad + kategori + "Detay" düğmesi; yan panelde Gezi/Mola/Destek yanında
+  "Detay" sekmesi. Detay, listeden zaten bilinen alanları (ad, kategori, yola uzaklık, çalışma saatleri, ücret, site)
+  **beklemeden** gösterir; yalnızca görsel/özet/puan/sorular `GET /api/yerler/{id}/detay` gelince dolar.
