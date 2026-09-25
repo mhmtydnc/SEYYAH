@@ -23,6 +23,7 @@ export interface KoridorYeri {
   calismaSaatleri: string | null
   wikidataId: string | null
   website: string | null
+  gorselUrl: string | null
 }
 
 export interface YerDetayi extends Pick<KoridorYeri, 'id' | 'ad' | 'kategori' | 'tur' | 'enlem' | 'boylam' | 'ucret' | 'calismaSaatleri' | 'website'> {

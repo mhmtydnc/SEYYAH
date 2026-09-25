@@ -4,6 +4,7 @@ import { divIcon, latLngBounds, type CircleMarker as LeafletDaire, type LatLngTu
 import type { DurakliRota, Konum, KoridorYeri, Rota, RotaYaniti, YerTuru } from '../api/tipler'
 import type { SeciliDurak, SiraliNokta } from '../rota/duraklar'
 import { kategoriAdi } from '../api/kategoriler'
+import { guvenliSite } from '../api/baglanti'
 import { leafletKoordinatlari } from './koordinat'
 
 const renkler: Record<YerTuru, string> = { gezi: '#d55b38', mola: '#2b8a73', destek: '#3d71b0' }
@@ -32,9 +33,14 @@ function YerIsareti({ yer, secili, durakMi, durakDegistir, detayiAc, eklenebilir
   useEffect(() => { if (secili) isaret.current?.openPopup() }, [secili])
   return <CircleMarker ref={isaret} center={[yer.enlem, yer.boylam]} radius={secili ? 9 : 7}
     pathOptions={{ color: '#fff', weight: 2, fillColor: renkler[yer.tur], fillOpacity: 1 }}>
-    <Popup><strong>{yer.ad}</strong><br />{kategoriAdi(yer.kategori)}<br />
-      <a href="#yer-detayi" onClick={(olay) => { olay.preventDefault(); detayiAc(yer) }}>Detay</a><br />
-      <button type="button" disabled={!eklenebilir} onClick={() => durakDegistir(yer)}>{durakMi ? 'Duraktan çıkar' : '+ Durak ekle'}</button></Popup>
+    <Popup><div className="yer-acilir-kutu">
+      {guvenliSite(yer.gorselUrl) && <img src={guvenliSite(yer.gorselUrl)!} alt={yer.ad} loading="lazy" />}
+      <strong>{yer.ad}</strong><span>{kategoriAdi(yer.kategori)}</span>
+      <div className="yer-acilir-eylemler">
+        <button type="button" className="birincil" onClick={() => detayiAc(yer)}>Detay</button>
+        <button type="button" className="durak-dugmesi" disabled={!eklenebilir} onClick={() => durakDegistir(yer)}>{durakMi ? 'Duraktan çıkar' : '+ Durak ekle'}</button>
+      </div>
+    </div></Popup>
   </CircleMarker>
 }
 
